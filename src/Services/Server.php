@@ -283,6 +283,7 @@ class Server
 
     private function executeRequest(array $requestOptions, string $content): JackedResponse
     {
+        $result = '';
         $error = '';
 
         $startTime = microtime(true);

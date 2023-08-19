@@ -8,6 +8,20 @@ runs:
       with:
         php-version: '8.2'
         extensions: openswoole
+        coverage: none
+      env:
+        fail-fast: true
+
+    - name: Debug
+      shell: bash
+      run: |
+        echo "================================"
+        echo "================================"
+        php -i
+        echo "================================"
+        php -i | grep php.ini
+        echo "================================"
+        echo "================================"
 
     - name: Validate composer.json and composer.lock
       shell: bash
