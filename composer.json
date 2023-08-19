@@ -28,10 +28,5 @@
     "require-dev": {
         "orchestra/testbench": "^8.8",
         "phpunit/phpunit": "^10.3"
-    },
-    "scripts": {
-        "post-autoload-dump": [
-            "@php vendor/bin/testbench package:discover --ansi"
-        ]
     }
 }
