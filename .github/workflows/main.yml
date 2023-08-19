@@ -19,4 +19,6 @@ jobs:
 
       - name: Run test suite
         shell: bash
-        run: php vendor/bin/phpunit
+        run: |
+          cd /var/www/jacked-server
+          sudo -u www-data -- vendor/bin/phpunit

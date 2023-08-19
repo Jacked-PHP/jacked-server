@@ -9,19 +9,9 @@ runs:
         php-version: '8.2'
         extensions: openswoole
         coverage: none
+        tools: composer, phpunit
       env:
         fail-fast: true
-
-    - name: Debug
-      shell: bash
-      run: |
-        echo "================================"
-        echo "================================"
-        php -i
-        echo "================================"
-        php -i | grep php.ini
-        echo "================================"
-        echo "================================"
 
     - name: Validate composer.json and composer.lock
       shell: bash
@@ -40,3 +30,21 @@ runs:
       if: steps.composer-cache.outputs.cache-hit != 'true'
       shell: bash
       run: composer install --prefer-dist --no-progress --no-suggest
+
+    - name: Change php-fpm to run with TCP
+      shell: bash
+      run: sudo sed -i 's/listen = \/run\/php\/php8.2-fpm.sock/listen = 127.0.0.1:9000/' /etc/php/8.2/fpm/pool.d/www.conf
+
+    - name: Keep only php-fpm 8.2
+      shell: bash
+      run: |
+        sudo service php8.1-fpm stop
+        sudo service php8.2-fpm stop
+        sudo ps aux | grep php-fpm
+        sudo service php8.2-fpm start
+
+    - name: Copy jacked server to linux host place
+      shell: bash
+      run: |
+        sudo cp -r ${{ github.workspace }} /var/www/jacked-server
+        sudo chown -R www-data /var/www/jacked-server
