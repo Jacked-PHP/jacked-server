@@ -1,0 +1,22 @@
+name: PHP Composer
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+jobs:
+
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Prepare Environment
+        uses: ./.github/actions/prepare-environment
+
+      - name: Run test suite
+        shell: bash
+        run: php vendor/bin/phpunit

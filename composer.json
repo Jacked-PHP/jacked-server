@@ -1,0 +1,37 @@
+{
+    "name": "jacked-php/jacked-server",
+    "autoload": {
+        "psr-4": {
+            "JackedPhp\\JackedServer\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "require": {
+        "ext-openswoole": "22.*",
+        "adoy/fastcgi-client": "^1.0",
+        "guzzlehttp/guzzle": "^7.7"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "JackedPhp\\JackedServer\\JackedServerProvider"
+            ],
+            "aliases": {
+                "JackedServer": "JackedPhp\\JackedServer\\Facade"
+            }
+        }
+    },
+    "require-dev": {
+        "orchestra/testbench": "^8.8",
+        "phpunit/phpunit": "^10.3"
+    },
+    "scripts": {
+        "post-autoload-dump": [
+            "@php vendor/bin/testbench package:discover --ansi"
+        ]
+    }
+}
