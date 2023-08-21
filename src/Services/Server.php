@@ -18,6 +18,7 @@ use OpenSwoole\Http\Response;
 use OpenSwoole\Server as OpenSwooleBaseServer;
 use OpenSwoole\Http\Server as OpenSwooleServer;
 use Psr\Log\LoggerInterface;
+use OpenSwoole\Util;
 
 class Server
 {
@@ -56,11 +57,10 @@ class Server
             'enable_static_handler' => true,
             'static_handler_locations' => [ '/imgs', '/css' ],
             // reactor and workers
-            'reactor_num' => \OpenSwoole\Util::getCPUNum() + 2,
-            'worker_num' => \OpenSwoole\Util::getCPUNum() + 2,
+            'reactor_num' => Util::getCPUNum() + 2,
+            'worker_num' => Util::getCPUNum() + 2,
         ]));
         $server->on('start', [$this, 'handleStart']);
-        $server->on('request', [$this, 'handleRequest']);
 
         // ssl
         if (config('jacked-server.ssl-enabled', false)) {
@@ -75,9 +75,21 @@ class Server
                 'open_http_protocol' => true,
             ]);
             $sslPort->on('request', [$this, 'handleRequest']);
+            $server->on('request', [$this, 'sslRedirectRequest']);
+        } else {
+            $server->on('request', [$this, 'handleRequest']);
         }
 
         $server->start();
+    }
+
+    public function sslRedirectRequest(Request $request, Response $response) {
+        $response->status(301);
+        $response->header(
+            'Location',
+            'https://' . $request->header['host'] . $request->server['request_uri'],
+        );
+        $response->end();
     }
 
     public function handleStart(OpenSwooleServer $server): void

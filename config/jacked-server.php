@@ -64,13 +64,4 @@ return [
         'host' => env('JACKED_SERVER_FASTCGI_HOST', '127.0.0.1'),
         'port' => env('JACKED_SERVER_FASTCGI_PORT', 9000),
     ],
-
-    // ------------------------------------------------------------
-    // Events
-    // ------------------------------------------------------------
-
-    'events' => [
-        'server-started' => [ JackedServerStarted::class ],
-        'request-received' => [ JackedRequestReceived::class ],
-    ],
 ];

@@ -16,7 +16,7 @@ class JackedServerProvider extends ServiceProvider
     {
         $this->publishes([
             __DIR__.'/../config/jacked-server.php' => config_path('jacked-server.php'),
-        ]);
+        ], 'jacked-server');
 
         if ($this->app->runningInConsole()) {
             $this->commands([
