@@ -12,6 +12,8 @@ return [
     'host' => env('JACKED_SERVER_HOST', '0.0.0.0'),
     'port' => env('JACKED_SERVER_PORT', 8080),
     'server-type' => env('JACKED_SERVER_SERVER_TYPE', Server::POOL_MODE),
+    'timeout' => env('JACKED_SERVER_TIMEOUT', 60),
+    'readwrite-timeout' => env('JACKED_SERVER_READWRITE_TIMEOUT', 60),
 
     // ------------------------------------------------------------
     // SSL

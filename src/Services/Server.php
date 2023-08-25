@@ -59,6 +59,8 @@ class Server
             // reactor and workers
             'reactor_num' => Util::getCPUNum() + 2,
             'worker_num' => Util::getCPUNum() + 2,
+            // timeout
+            'max_request_execution_time' => config('jacked-server.timeout', 60),
         ]), ($ssl ? [
             'ssl_cert_file' => config('jacked-server.ssl-cert-file'),
             'ssl_key_file' => config('jacked-server.ssl-key-file'),
@@ -401,10 +403,17 @@ class Server
             $this->logger->info($this->logPrefix . 'Request Time: {time}', [
                 'time' => Carbon::now()->format('Y-m-d H:i:s'),
             ]);
-            $result = (new Client(
+            $client = new Client(
                 host: config('jacked-server.fastcgi.host', '127.0.0.1'),
                 port: config('jacked-server.fastcgi.port', 9000),
-            ))->request($requestOptions, $content);
+            );
+            $client->setConnectTimeout(
+                config('jacked-server.timeout', 60) * 1000,
+            );
+            $client->setReadWriteTimeout(
+                config('jacked-server.readwrite-timeout', 60) * 1000,
+            );
+            $result = ($client)->request($requestOptions, $content);
         } catch (Exception $e) {
             $error = $e->getMessage();
 
