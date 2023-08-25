@@ -115,18 +115,6 @@ class Server
             return false;
         }
 
-        // check for authorization
-        try {
-            $authToken = $request->header['authorization'] ?? null;
-            if ($authToken !== 'YOUR_SECRET_TOKEN') {
-                throw new Exception('Unauthorized');
-            }
-        } catch (Exception $e) {
-            $response->status(401);
-            $response->end($e->getMessage());
-            return false;
-        }
-
         foreach($headers as $headerKey => $val) {
             $response->header($headerKey, $val);
         }
