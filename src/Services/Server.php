@@ -13,12 +13,15 @@ use JackedPhp\JackedServer\Events\JackedRequestFinished;
 use JackedPhp\JackedServer\Events\JackedRequestReceived;
 use JackedPhp\JackedServer\Events\JackedServerStarted;
 use JackedPhp\JackedServer\Services\Response as JackedResponse;
+use OpenSwoole\Constant;
 use OpenSwoole\Http\Request;
 use OpenSwoole\Http\Response;
 use OpenSwoole\Server as OpenSwooleBaseServer;
-use OpenSwoole\Http\Server as OpenSwooleServer;
+use OpenSwoole\WebSocket\Server as OpenSwooleServer;
+use OpenSwoole\WebSocket\Frame;
 use Psr\Log\LoggerInterface;
 use OpenSwoole\Util;
+use Conveyor\SocketHandlers\SocketMessageRouter as Conveyor;
 
 class Server
 {
@@ -47,43 +50,99 @@ class Server
 
     public function run(): void
     {
-        $server = new OpenSwooleServer(
-            $this->host ?? config('jacked-server.host', '0.0.0.0'),
-            $this->port ?? config('jacked-server.port', 8080),
-            config('jacked-server.server-type', OpenSwooleBaseServer::POOL_MODE),
-        );
-        $server->set(config('jacked-server.openswoole-server-settings', [
+        $ssl = config('jacked-server.ssl-enabled', false);
+        $primaryPort = $ssl ? config('jacked-server.ssl-port', 443) : config('jacked-server.port', 8080);
+        $serverConfig = array_merge(config('jacked-server.openswoole-server-settings', [
             'document_root' => $this->publicDocumentRoot ?? public_path(),
             'enable_static_handler' => true,
             'static_handler_locations' => [ '/imgs', '/css' ],
             // reactor and workers
             'reactor_num' => Util::getCPUNum() + 2,
             'worker_num' => Util::getCPUNum() + 2,
-        ]));
+        ]), ($ssl ? [
+            'ssl_cert_file' => config('jacked-server.ssl-cert-file'),
+            'ssl_key_file' => config('jacked-server.ssl-key-file'),
+            'open_http_protocol' => true,
+        ] : []));
+
+        $server = new OpenSwooleServer(
+            $this->host ?? config('jacked-server.host', '0.0.0.0'),
+            $this->port ?? $primaryPort,
+            config('jacked-server.server-type', OpenSwooleBaseServer::POOL_MODE),
+            $ssl ? Constant::SOCK_TCP | Constant::SSL : Constant::SOCK_TCP,
+        );
+        $server->set($serverConfig);
         $server->on('start', [$this, 'handleStart']);
 
         // ssl
-        if (config('jacked-server.ssl-enabled', false)) {
-            $sslPort = $server->listen(
+        if ($ssl) {
+            $secondaryPort = $server->listen(
                 $this->host ?? config('jacked-server.host', '0.0.0.0'),
-                config('jacked-server.ssl-port', 443),
-                SWOOLE_SOCK_TCP | SWOOLE_SSL
+                config('jacked-server.port', 8080),
+                Constant::SOCK_TCP
             );
-            $sslPort->set([
-                'ssl_cert_file' => base_path('packages/jacked-php/jacked-server/js-cert.pem'),
-                'ssl_key_file' => base_path('packages/jacked-php/jacked-server/js-key.pem'),
-                'open_http_protocol' => true,
-            ]);
-            $sslPort->on('request', [$this, 'handleRequest']);
-            $server->on('request', [$this, 'sslRedirectRequest']);
-        } else {
-            $server->on('request', [$this, 'handleRequest']);
+
+            $secondaryPort->on('request', [$this, 'sslRedirectRequest']);
         }
+
+        $server->on('request', [$this, 'handleRequest']);
+        $server->on('message', [$this, 'handleWsMessage']);
+        $server->on('handshake', [$this, 'handleWsHandshake']);
+        $server->on('open', [$this, 'handleWsOpen']);
 
         $server->start();
     }
 
-    public function sslRedirectRequest(Request $request, Response $response) {
+    public function handleWsOpen(OpenSwooleServer $server, Request $request): void
+    {
+        $message = 'OpenSwoole Connection opened'
+            . ' with FD: ' . $request->fd
+            . ' on ' . $server->host . ':' . $server->port
+            . ' at ' . Carbon::now()->format('Y-m-d H:i:s');
+        $this->logger->info($this->logPrefix . $message);
+    }
+
+    public function handleWsHandshake(Request $request, Response $response): bool
+    {
+        // evaluate intention to upgrade to websocket
+        try {
+            $headers = $this->processSecWebSocketKey($request);
+        } catch (Exception $e) {
+            $response->status(400);
+            $response->end($e->getMessage());
+            return false;
+        }
+
+        // check for authorization
+        try {
+            $authToken = $request->header['authorization'] ?? null;
+            if ($authToken !== 'YOUR_SECRET_TOKEN') {
+                throw new Exception('Unauthorized');
+            }
+        } catch (Exception $e) {
+            $response->status(401);
+            $response->end($e->getMessage());
+            return false;
+        }
+
+        foreach($headers as $headerKey => $val) {
+            $response->header($headerKey, $val);
+        }
+
+        $response->status(101);
+        $response->end();
+
+        return true;
+    }
+
+    public function handleWsMessage(OpenSwooleServer $server, Frame $frame): void
+    {
+        $this->logger->info($this->logPrefix . ' Message received from ' . $frame->fd);
+        Conveyor::run($frame->data, $frame->fd, $server);
+    }
+
+    public function sslRedirectRequest(Request $request, Response $response): void
+    {
         $response->status(301);
         $response->header(
             'Location',
@@ -115,6 +174,39 @@ class Server
         $jackedResponse = $this->executeRequest($requestOptions, $content);
 
         $this->sendResponse($response, $jackedResponse);
+    }
+
+    /**
+     * @param Request $request
+     * @return array
+     * @throws Exception
+     */
+    private function processSecWebSocketKey(Request $request): array
+    {
+        $secWebSocketKey = $request->header['sec-websocket-key'];
+        $patten = '#^[+/0-9A-Za-z]{21}[AQgw]==$#';
+
+        if (
+            0 === preg_match($patten, $secWebSocketKey)
+            || 16 !== strlen(base64_decode($secWebSocketKey))
+        ) {
+            throw new Exception('Invalid Sec-WebSocket-Key');
+        }
+
+        $key = base64_encode(sha1($request->header['sec-websocket-key'] . '258EAFA5-E914-47DA-95CA-C5AB0DC85B11', true));
+
+        $headers = [
+            'Upgrade' => 'websocket',
+            'Connection' => 'Upgrade',
+            'Sec-WebSocket-Accept' => $key,
+            'Sec-WebSocket-Version' => '13',
+        ];
+
+        if(isset($request->header['sec-websocket-protocol'])) {
+            $headers['Sec-WebSocket-Protocol'] = $request->header['sec-websocket-protocol'];
+        }
+
+        return $headers;
     }
 
     private function sendResponse(Response $response, JackedResponse $jackedResponse): void
@@ -216,8 +308,7 @@ class Server
 
     private function getPathInfo(array $serverInfo): string
     {
-        $pathInfo = Arr::get($serverInfo, 'path_info', '');
-        return rtrim(dirname($pathInfo), '/');
+        return Arr::get($serverInfo, 'path_info', '');
     }
 
     /**
