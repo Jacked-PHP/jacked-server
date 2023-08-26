@@ -12,6 +12,9 @@ use JackedPhp\JackedServer\Events\JackedRequestError;
 use JackedPhp\JackedServer\Events\JackedRequestFinished;
 use JackedPhp\JackedServer\Events\JackedRequestReceived;
 use JackedPhp\JackedServer\Events\JackedServerStarted;
+use JackedPhp\JackedServer\Models\WebSockets\AssociationsPersistence;
+use JackedPhp\JackedServer\Models\WebSockets\ChannelsPersistence;
+use JackedPhp\JackedServer\Models\WebSockets\ListenersPersistence;
 use JackedPhp\JackedServer\Services\Response as JackedResponse;
 use OpenSwoole\Constant;
 use OpenSwoole\Http\Request;
@@ -28,6 +31,7 @@ class Server
     private LoggerInterface $logger;
     private string $logPrefix = 'JackedServer: ';
     private string $inputFile;
+    private array $wsPersistence;
 
     public function __construct(
         private readonly ?string $host = null,
@@ -46,6 +50,7 @@ class Server
             'path' => config('jacked-server.log.path', storage_path('logs/jacked-server.log')),
             'replace_placeholders' => config('jacked-server.log.replace-placeholders', 'single'),
         ]);
+        $this->wsPersistence = [new ChannelsPersistence, new AssociationsPersistence, new ListenersPersistence];
     }
 
     public function run(): void
@@ -66,6 +71,8 @@ class Server
             'ssl_key_file' => config('jacked-server.ssl-key-file'),
             'open_http_protocol' => true,
         ] : []));
+
+        Conveyor::refresh($this->wsPersistence);
 
         $server = new OpenSwooleServer(
             $this->host ?? config('jacked-server.host', '0.0.0.0'),
@@ -106,6 +113,7 @@ class Server
 
     public function handleWsHandshake(Request $request, Response $response): bool
     {
+        $this->logger->info($this->logPrefix . ' Handshake received from ' . $request->fd);
         // evaluate intention to upgrade to websocket
         try {
             $headers = $this->processSecWebSocketKey($request);
@@ -128,7 +136,9 @@ class Server
     public function handleWsMessage(OpenSwooleServer $server, Frame $frame): void
     {
         $this->logger->info($this->logPrefix . ' Message received from ' . $frame->fd);
-        Conveyor::run($frame->data, $frame->fd, $server);
+        Conveyor::run($frame->data, $frame->fd, $server, [
+            'persistence' => $this->wsPersistence,
+        ]);
     }
 
     public function sslRedirectRequest(Request $request, Response $response): void

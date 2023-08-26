@@ -39,6 +39,12 @@ return [
 ];
 ```
 
+Run migrations:
+
+```shell
+php artisan migrate
+```
+
 ## FastCGI Proxy
 
 This server proxy the request to a FastCGI Socket or TCP service. IT is capable of serving WordPress websites, advanced Laravel applications or even single PHP files if needed. It can serve HTTPS and HTTP. 
