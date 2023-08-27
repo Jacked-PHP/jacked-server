@@ -4,6 +4,7 @@ namespace Tests;
 
 use DirectoryIterator;
 use Exception;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Process;
 use JackedPhp\JackedServer\Services\Server;
@@ -13,6 +14,8 @@ use Illuminate\Http\Client\Response;
 
 class TestCase extends BaseTestCase
 {
+    use RefreshDatabase;
+
     protected $loadEnvironmentVariables = false;
 
     public string $laravelPath;
