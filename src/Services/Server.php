@@ -268,9 +268,20 @@ class Server
             cookies: array_change_key_case($request->cookie ?? []),
             contentLength: strlen($content),
         );
+        $this->requestUriTweak($requestOptions);
         event(JackedRequestReceived::class, $requestOptions, $content);
 
         return [ $requestOptions, $content ];
+    }
+
+    private function requestUriTweak(array &$requestOptions): void
+    {
+        if (
+            !empty($requestOptions['QUERY_STRING'])
+            && !str_contains($requestOptions['REQUEST_URI'], '?')
+        ) {
+            $requestOptions['REQUEST_URI'] .= '?' . $requestOptions['QUERY_STRING'];
+        }
     }
 
     private function prepareRequestOptions(
