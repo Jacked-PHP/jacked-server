@@ -6,6 +6,11 @@ class Response
 {
     private const HEADER_PATTERN = '#^([^\:]+):(.*)$#';
 
+    private const EXCEPTIONAL_HEADERS = [
+        'PHP message',
+        'PHP error',
+    ];
+
     /** @var array<string, array<int, string>> */
     private array $normalizedHeaders = [];
 
@@ -17,92 +22,101 @@ class Response
     public function __construct(
         private readonly string $output,
         private readonly string $error,
-        private readonly float $duration,
-    ) {
+        private readonly float  $duration,
+    )
+    {
         $this->parseHeadersAndBody();
     }
 
-    private function parseHeadersAndBody() : void
+    private function parseHeadersAndBody(): void
     {
-        $lines  = explode( PHP_EOL, $this->output );
+        $lines = explode(PHP_EOL, $this->output);
         $offset = 0;
 
-        foreach ( $lines as $i => $line )
-        {
+        foreach ($lines as $i => $line) {
             $matches = [];
-            if ( !preg_match( self::HEADER_PATTERN, $line, $matches ) )
-            {
+            if (!preg_match(self::HEADER_PATTERN, $line, $matches)) {
                 break;
             }
 
-            $offset      = $i;
-            $headerKey   = trim( $matches[1] );
-            $headerValue = trim( $matches[2] );
+            if ($this->handleExceptionalHeaders($matches)) {
+                continue;
+            }
 
-            $this->addRawHeader( $headerKey, $headerValue );
-            $this->addNormalizedHeader( $headerKey, $headerValue );
+            $offset = $i;
+            $headerKey = trim($matches[1]);
+            $headerValue = trim($matches[2]);
+
+            $this->addRawHeader($headerKey, $headerValue);
+            $this->addNormalizedHeader($headerKey, $headerValue);
         }
 
-        $this->body = implode( PHP_EOL, array_slice( $lines, $offset + 2 ) );
+        $this->body = implode(PHP_EOL, array_slice($lines, $offset + 2));
     }
 
-    private function addRawHeader( string $headerKey, string $headerValue ) : void
+    private function handleExceptionalHeaders(array $matches): bool
     {
-        if ( !isset( $this->headers[ $headerKey ] ) )
-        {
-            $this->headers[ $headerKey ] = [$headerValue];
+        if (in_array($matches[1], self::EXCEPTIONAL_HEADERS)) {
+            return true;
+        }
+        return false;
+    }
+
+    private function addRawHeader(string $headerKey, string $headerValue): void
+    {
+        if (!isset($this->headers[$headerKey])) {
+            $this->headers[$headerKey] = [$headerValue];
 
             return;
         }
 
-        $this->headers[ $headerKey ][] = $headerValue;
+        $this->headers[$headerKey][] = $headerValue;
     }
 
-    private function addNormalizedHeader( string $headerKey, string $headerValue ) : void
+    private function addNormalizedHeader(string $headerKey, string $headerValue): void
     {
-        $key = strtolower( $headerKey );
+        $key = strtolower($headerKey);
 
-        if ( !isset( $this->normalizedHeaders[ $key ] ) )
-        {
-            $this->normalizedHeaders[ $key ] = [$headerValue];
+        if (!isset($this->normalizedHeaders[$key])) {
+            $this->normalizedHeaders[$key] = [$headerValue];
 
             return;
         }
 
-        $this->normalizedHeaders[ $key ][] = $headerValue;
+        $this->normalizedHeaders[$key][] = $headerValue;
     }
 
-    public function getHeader( string $headerKey ) : array
+    public function getHeader(string $headerKey): array
     {
-        return $this->normalizedHeaders[ strtolower( $headerKey ) ] ?? [];
+        return $this->normalizedHeaders[strtolower($headerKey)] ?? [];
     }
 
-    public function getHeaderLine( string $headerKey ) : string
+    public function getHeaderLine(string $headerKey): string
     {
-        return implode( ', ', $this->getHeader( $headerKey ) );
+        return implode(', ', $this->getHeader($headerKey));
     }
 
-    public function getHeaders() : array
+    public function getHeaders(): array
     {
         return $this->headers;
     }
 
-    public function getBody() : string
+    public function getBody(): string
     {
         return $this->body;
     }
 
-    public function getOutput() : string
+    public function getOutput(): string
     {
         return $this->output;
     }
 
-    public function getError() : string
+    public function getError(): string
     {
         return $this->error;
     }
 
-    public function getDuration() : float
+    public function getDuration(): float
     {
         return $this->duration;
     }
@@ -112,7 +126,7 @@ class Response
      */
     public function getStatus(): array
     {
-        return match(current($this->getHeader('Status'))) {
+        return match (current($this->getHeader('Status'))) {
             '100 Continue' => [100, 'Continue'],
             '101 Switching Protocols' => [101, 'Switching Protocols'],
             '200 OK' => [200, 'OK'],
