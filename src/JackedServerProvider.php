@@ -14,8 +14,6 @@ class JackedServerProvider extends ServiceProvider
 
     public function boot(): void
     {
-        $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
-
         $this->publishes([
             __DIR__.'/../config/jacked-server.php' => config_path('jacked-server.php'),
         ], 'jacked-server');

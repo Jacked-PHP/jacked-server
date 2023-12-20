@@ -1,0 +1,171 @@
+parameters:
+	ignoreErrors:
+		-
+			message: "#^Method JackedPhp\\\\JackedServer\\\\Commands\\\\OpenSwooleServer\\:\\:handle\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: src/Commands/OpenSwooleServer.php
+
+		-
+			message: "#^Parameter \\$port of class JackedPhp\\\\JackedServer\\\\Services\\\\Server constructor expects int\\|null, array\\|bool\\|string\\|null given\\.$#"
+			count: 1
+			path: src/Commands/OpenSwooleServer.php
+
+		-
+			message: "#^Method JackedPhp\\\\JackedServer\\\\Events\\\\JackedRequestError\\:\\:__construct\\(\\) has parameter \\$headers with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Events/JackedRequestError.php
+
+		-
+			message: "#^Method JackedPhp\\\\JackedServer\\\\Events\\\\JackedRequestFinished\\:\\:__construct\\(\\) has parameter \\$headers with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Events/JackedRequestFinished.php
+
+		-
+			message: "#^Method JackedPhp\\\\JackedServer\\\\Events\\\\JackedRequestReceived\\:\\:__construct\\(\\) has parameter \\$requestOptions with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Events/JackedRequestReceived.php
+
+		-
+			message: "#^Method JackedPhp\\\\JackedServer\\\\Services\\\\Response\\:\\:getHeader\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Services/Response.php
+
+		-
+			message: "#^Method JackedPhp\\\\JackedServer\\\\Services\\\\Response\\:\\:getHeaders\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Services/Response.php
+
+		-
+			message: "#^Method JackedPhp\\\\JackedServer\\\\Services\\\\Response\\:\\:handleExceptionalHeaders\\(\\) has parameter \\$matches with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Services/Response.php
+
+		-
+			message: "#^Call to an undefined static method Kanata\\\\LaravelBroadcaster\\\\Models\\\\Token\\:\\:byToken\\(\\)\\.$#"
+			count: 1
+			path: src/Services/Server.php
+
+		-
+			message: "#^Method JackedPhp\\\\JackedServer\\\\Services\\\\Server\\:\\:__construct\\(\\) has parameter \\$wsPersistenceOptions with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Services/Server.php
+
+		-
+			message: "#^Method JackedPhp\\\\JackedServer\\\\Services\\\\Server\\:\\:addCookies\\(\\) has parameter \\$cookies with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Services/Server.php
+
+		-
+			message: "#^Method JackedPhp\\\\JackedServer\\\\Services\\\\Server\\:\\:addCookies\\(\\) has parameter \\$requestOptions with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Services/Server.php
+
+		-
+			message: "#^Method JackedPhp\\\\JackedServer\\\\Services\\\\Server\\:\\:addHeaders\\(\\) has parameter \\$headers with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Services/Server.php
+
+		-
+			message: "#^Method JackedPhp\\\\JackedServer\\\\Services\\\\Server\\:\\:addHeaders\\(\\) has parameter \\$requestOptions with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Services/Server.php
+
+		-
+			message: "#^Method JackedPhp\\\\JackedServer\\\\Services\\\\Server\\:\\:addServerInfo\\(\\) has parameter \\$requestOptions with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Services/Server.php
+
+		-
+			message: "#^Method JackedPhp\\\\JackedServer\\\\Services\\\\Server\\:\\:addServerInfo\\(\\) has parameter \\$serverInfo with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Services/Server.php
+
+		-
+			message: "#^Method JackedPhp\\\\JackedServer\\\\Services\\\\Server\\:\\:checkPathTrailingSlash\\(\\) has parameter \\$requestOptions with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Services/Server.php
+
+		-
+			message: "#^Method JackedPhp\\\\JackedServer\\\\Services\\\\Server\\:\\:executeRequest\\(\\) has parameter \\$requestOptions with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Services/Server.php
+
+		-
+			message: "#^Method JackedPhp\\\\JackedServer\\\\Services\\\\Server\\:\\:gatherRequestInfo\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Services/Server.php
+
+		-
+			message: "#^Method JackedPhp\\\\JackedServer\\\\Services\\\\Server\\:\\:getPathInfo\\(\\) has parameter \\$serverInfo with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Services/Server.php
+
+		-
+			message: "#^Method JackedPhp\\\\JackedServer\\\\Services\\\\Server\\:\\:getServerConfig\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Services/Server.php
+
+		-
+			message: "#^Method JackedPhp\\\\JackedServer\\\\Services\\\\Server\\:\\:prepareRequestOptions\\(\\) has parameter \\$cookies with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Services/Server.php
+
+		-
+			message: "#^Method JackedPhp\\\\JackedServer\\\\Services\\\\Server\\:\\:prepareRequestOptions\\(\\) has parameter \\$header with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Services/Server.php
+
+		-
+			message: "#^Method JackedPhp\\\\JackedServer\\\\Services\\\\Server\\:\\:prepareRequestOptions\\(\\) has parameter \\$serverInfo with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Services/Server.php
+
+		-
+			message: "#^Method JackedPhp\\\\JackedServer\\\\Services\\\\Server\\:\\:prepareRequestOptions\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Services/Server.php
+
+		-
+			message: "#^Method JackedPhp\\\\JackedServer\\\\Services\\\\Server\\:\\:processSecWebSocketKey\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Services/Server.php
+
+		-
+			message: "#^Method JackedPhp\\\\JackedServer\\\\Services\\\\Server\\:\\:requestUriTweak\\(\\) has parameter \\$requestOptions with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/Services/Server.php
+
+		-
+			message: "#^PHPDoc tag @param has invalid value \\(array\\<GenericPersistence\\>\\|null \\$this\\-\\>wsPersistenceOptions\\)\\: Unexpected token \"\\$this\", expected variable at offset 272$#"
+			count: 1
+			path: src/Services/Server.php
+
+		-
+			message: "#^Parameter \\#2 \\$contents of static method Illuminate\\\\Support\\\\Facades\\\\Storage\\:\\:put\\(\\) expects Illuminate\\\\Http\\\\File\\|Illuminate\\\\Http\\\\UploadedFile\\|Psr\\\\Http\\\\Message\\\\StreamInterface\\|resource\\|string, int given\\.$#"
+			count: 1
+			path: src/Services/Server.php
+
+		-
+			message: "#^Property JackedPhp\\\\JackedServer\\\\Services\\\\Server\\:\\:\\$manager is never read, only written\\.$#"
+			count: 1
+			path: src/Services/Server.php
+
+		-
+			message: "#^Property JackedPhp\\\\JackedServer\\\\Services\\\\Server\\:\\:\\$wsPersistence \\(array\\<JackedPhp\\\\JackedServer\\\\Services\\\\GenericPersistenceInterface\\>\\) does not accept array\\<Conveyor\\\\Persistence\\\\Interfaces\\\\GenericPersistenceInterface\\>\\.$#"
+			count: 1
+			path: src/Services/Server.php
+
+		-
+			message: "#^Property JackedPhp\\\\JackedServer\\\\Services\\\\Server\\:\\:\\$wsPersistence has unknown class JackedPhp\\\\JackedServer\\\\Services\\\\GenericPersistenceInterface as its type\\.$#"
+			count: 1
+			path: src/Services/Server.php
+
+		-
+			message: "#^Property JackedPhp\\\\JackedServer\\\\Services\\\\Server\\:\\:\\$wsPersistenceOptions is never read, only written\\.$#"
+			count: 1
+			path: src/Services/Server.php
+
+		-
+			message: "#^Variable \\$cookies on left side of \\?\\? always exists and is not nullable\\.$#"
+			count: 1
+			path: src/Services/Server.php

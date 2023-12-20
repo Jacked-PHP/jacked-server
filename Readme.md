@@ -45,15 +45,19 @@ Run migrations:
 php artisan migrate
 ```
 
+> **IMPORTANT:** notice that this service acts as a FastCGI client, that means it behaves by default with www-data permissions. That said, all files that it needs to read/write needs the proper permissions. 
+
 ## FastCGI Proxy
 
-This server proxy the request to a FastCGI Socket or TCP service. IT is capable of serving WordPress websites, advanced Laravel applications or even single PHP files if needed. It can serve HTTPS and HTTP. 
+This server proxy the request to a FastCGI Socket or TCP service. IT is capable of serving advanced Laravel applications, WordPress websites or even single PHP files if needed. It can serve HTTPS and HTTP. It comes with WebSockets support out of the box available in the same port as the HTTP server, with messages routed via [Socket Conveyor](https://socketconveyor.com).
 
 The `jacked:server` command, part of the Jacked Server service, provides a CLI interface to start the OpenSwoole server to serve your website via FastCGI proxy.
 
-### Signature
+## Command
 
-The command can be invoked using:
+**Signature**
+
+You start the server by invoked:
 
 ```
 php artisan jacked:server
@@ -67,17 +71,9 @@ It accepts the following optional parameters:
 - `--documentRoot`: Specifies the document root directory where assets like js files, css or images will be served from. Defaults to `public`.
 - `--publicDocumentRoot`: Specifies the public document root directory. Defaults to `public`.
 
-### Description
+**Description**
 
-The command's description is:
-
-```
-JackedPHP OpenSwoole Server
-```
-
-### Execution
-
-When executed, the command initializes a new instance of the `Server` class with the provided options and runs the server.
+This command starts the Jacked Server to serve your website via FastCGI proxy. It also provides a WebSocket server to handle WebSocket connections. It follows the configurations specified in the `config/jacked-server.php` file.
 
 ### Events
 
@@ -91,54 +87,50 @@ The server fires several events during its lifecycle:
 
 - **JackedRequestFinished:** Fired when the request processing is finished.
 
-### Configuration
+## WebSocket
 
-This configuration file provides settings for the Jacked Server. The settings are organized into various sections, each catering to a specific aspect of the server's operation.
+As said, this server comes with WebSocket out of the box, routed with Socket Conveyor.
 
-#### Running Server Details
+It has a Laravel Broadcasting driver. That allows events to be broadcast from the server to all connections using all conveyor features. It is also possible, by using Conveyor backend client, to run a bot that responds to a specific channel automatically.
 
-- `host`: The **IP address** or **domain** on which the server will run. Default is `'0.0.0.0'`, meaning it will listen on all available interfaces.
+**Authorization**
 
-- `port`: The port number on which the server will listen. Default is `8080`.
+The authorization is done via Laravel Sanctum. For this authorization to be activated, you'll need to install and use the package `kanata-php/laravel-broadcaster`. That package will make available the `conveyor` Broadcast driver.
 
-- `server-type`: Specifies the type of server. Default is `Server::POOL_MODE`. (refer to [OpenSwoole Server constructor documentation](https://openswoole.com/docs/modules/swoole-server-construct) for more information)
+To install the package:
 
-#### SSL Configuration
+```shell
+composer install kanata-php/laravel-broadcaster
+```
 
-> Note that when the SSL is enabled, requests to HTTP will be redirected to HTTPS.
+At this moment, it works by using JWT Token API generated for one time consumption. It serves to make sure that the frontend client authorizes before connecting to a protected channel. It uses a query string parameter "token", e.g.: `ws://localhost:8080?token=my-token-here`.
 
-- **`ssl-port`**: The port number for SSL connections. Default is `443`.
+To generate a valid token to be used, you can request authorization to the server using the broadcasting url:
 
-- **`ssl-enabled`**: Determines if SSL is enabled. Default is `false`.
+```
+POST /broadcasting/auth HTTP/1.1
+```
 
-- **`ssl-cert-file`**: Path to the SSL certificate file.
+This will give you a single use token like follows:
 
-- **`ssl-key-file`**: Path to the SSL key file.
+```
+{
+    "token": string
+}
+```
 
-#### Running Server Default Options
+A programmatic way is to use Conveyor's JwtToken service:
 
-- **`server-protocol`**: The protocol used by the server. Default is `'HTTP/1.1'`.
+```php
+use Kanata\LaravelBroadcaster\Services\JwtToken;
 
-- **`content-type`**: The default content type for responses. Default is `'text/html'`.
+/** @var \Kanata\LaravelBroadcaster\Models\Token $token */
+$token = JwtToken::create(
+    name: 'some-token',
+    userId: auth()->user()->id,
+    expire: null,
+    useLimit: 1,
+);
+``` 
 
-- **`input-file`**: The default input file for the server. Default is the `index.php` in the public directory.
-
-- **`openswoole-server-settings`**: Contains settings specific to the OpenSwoole server:
-    - **`document_root`**: The root directory for serving documents. Default is the public directory.
-    - **`enable_static_handler`**: Determines if static content handling is enabled. Default is `true`.
-    - **`static_handler_locations`**: Specifies the locations for static content. Default locations are `/imgs` and `/css`.
-
-#### Logging
-
-- **`log`**: Contains settings related to logging:
-    - **`driver`**: The logging driver to use. Default is `'single'`.
-    - **`path`**: The path where log files will be stored. Default is `logs/jacked-server.log` in the storage directory.
-    - **`replace-placeholders`**: A flag to determine if placeholders in the log should be replaced. Default is `true`.
-
-#### FastCgi Client Info
-
-This section provides information on how to connect to the FastCGI client:
-
-- **`host`**: The host for the FastCGI client. Default is `'127.0.0.1'`. If using a Unix socket, the format should be `unix:///path/to/php/socket`.
-
-- **`port`**: The port for the FastCGI client. Default is `9000`. If using a Unix socket, set this to `-1`.
+> **IMPORTANT:** This token will get expired after the limited usage.

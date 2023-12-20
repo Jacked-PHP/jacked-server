@@ -1,7 +1,6 @@
 <?php
 
 use JackedPhp\JackedServer\Events\JackedRequestReceived;
-use OpenSwoole\Server;
 use JackedPhp\JackedServer\Events\JackedServerStarted;
 
 return [
@@ -11,7 +10,7 @@ return [
 
     'host' => env('JACKED_SERVER_HOST', '0.0.0.0'),
     'port' => env('JACKED_SERVER_PORT', 8080),
-    'server-type' => env('JACKED_SERVER_SERVER_TYPE', Server::POOL_MODE),
+    'server-type' => env('JACKED_SERVER_SERVER_TYPE', 2),
     'timeout' => env('JACKED_SERVER_TIMEOUT', 60),
     'readwrite-timeout' => env('JACKED_SERVER_READWRITE_TIMEOUT', 60),
 
@@ -36,7 +35,7 @@ return [
         'enable_static_handler' => env('JACKED_SERVER_STATIC_ENABLED', true),
         'static_handler_locations' => explode(
             ',',
-            env('JACKED_SERVER_STATIC_LOCATIONS', '/imgs,/css'),
+            env('JACKED_SERVER_STATIC_LOCATIONS', '/imgs,/css,/js,/build'),
         ),
     ],
 
@@ -65,5 +64,14 @@ return [
     'fastcgi' => [
         'host' => env('JACKED_SERVER_FASTCGI_HOST', '127.0.0.1'),
         'port' => env('JACKED_SERVER_FASTCGI_PORT', 9000),
+    ],
+
+    // ------------------------------------------------------------
+    // WebSockets
+    // ------------------------------------------------------------
+
+    'websocket' => [
+        'enabled' => env('JACKED_SERVER_WEBSOCKET_ENABLED', true),
+        'broadcaster' => false,
     ],
 ];

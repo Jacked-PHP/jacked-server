@@ -5,11 +5,11 @@
          colors="true"
 >
     <testsuites>
-        <testsuite name="Unit">
-            <directory>tests/Unit</directory>
+        <testsuite name="Feature">
+            <directory>tests/Feature</directory>
         </testsuite>
     </testsuites>
     <php>
-        <env name="DB_CONNECTION" value="testing"/>
+        <env name="DB_CONNECTION" value="mysql"/>
     </php>
 </phpunit>

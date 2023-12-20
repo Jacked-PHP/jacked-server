@@ -1,0 +1,4 @@
+providers:
+  - Laravel\Sanctum\SanctumServiceProvider
+  - JackedPhp\JackedServer\JackedServerProvider
+  - Kanata\LaravelBroadcaster\ConveyorServiceProvider

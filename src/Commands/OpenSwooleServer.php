@@ -38,6 +38,7 @@ class OpenSwooleServer extends Command
             documentRoot: $this->option('documentRoot'),
             publicDocumentRoot: $this->option('publicDocumentRoot'),
             output: $this->getOutput(),
+            wsPersistenceOptions: config('jacked-server.ws-persistence-options'),
         ))->run();
     }
 }

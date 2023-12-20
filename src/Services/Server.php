@@ -2,44 +2,79 @@
 
 namespace JackedPhp\JackedServer\Services;
 
-use Adoy\FastCGI\Client;
+use Conveyor\Conveyor;
+use Conveyor\ConveyorServer;
+use Conveyor\Events\MessageReceivedEvent;
+use Conveyor\Events\PreServerStartEvent;
+use Conveyor\Events\ServerStartedEvent;
+use Conveyor\Persistence\Abstracts\GenericPersistence;
 use Exception;
 use Illuminate\Console\OutputStyle;
+use Illuminate\Database\Capsule\Manager;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Broadcast;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use JackedPhp\JackedServer\Events\JackedRequestError;
 use JackedPhp\JackedServer\Events\JackedRequestFinished;
-use JackedPhp\JackedServer\Events\JackedRequestReceived;
 use JackedPhp\JackedServer\Events\JackedServerStarted;
-use JackedPhp\JackedServer\Models\WebSockets\AssociationsPersistence;
-use JackedPhp\JackedServer\Models\WebSockets\ChannelsPersistence;
-use JackedPhp\JackedServer\Models\WebSockets\ListenersPersistence;
+use JackedPhp\JackedServer\Exceptions\RedirectException;
 use JackedPhp\JackedServer\Services\Response as JackedResponse;
+use JackedPhp\JackedServer\Services\Traits\HttpSupport;
+use JackedPhp\JackedServer\Services\Traits\WebSocketSupport;
+use Kanata\LaravelBroadcaster\Models\Token;
 use OpenSwoole\Constant;
 use OpenSwoole\Http\Request;
 use OpenSwoole\Http\Response;
 use OpenSwoole\Server as OpenSwooleBaseServer;
-use OpenSwoole\WebSocket\Server as OpenSwooleServer;
-use OpenSwoole\WebSocket\Frame;
-use Psr\Log\LoggerInterface;
 use OpenSwoole\Util;
-use Conveyor\SocketHandlers\SocketMessageRouter as Conveyor;
+use OpenSwoole\WebSocket\Frame;
+use OpenSwoole\WebSocket\Server as OpenSwooleServer;
+use Psr\Log\LoggerInterface;
 
 class Server
 {
+    use HttpSupport;
+    use WebSocketSupport;
+
     private LoggerInterface $logger;
     private string $logPrefix = 'JackedServer: ';
     private string $inputFile;
+
+    /**
+     * @var array <array-key, GenericPersistenceInterface>
+     */
     private array $wsPersistence;
 
+    /**
+     * We elect the first worker to do the refresh for
+     * WebSocket functionalities.
+     *
+     * @var string
+     */
+    private string $executionHolder = 'jacked-server-execution';
+
+    /**
+     * @param string|null $host
+     * @param int|null $port
+     * @param string|null $inputFile
+     * @param string|null $documentRoot
+     * @param string|null $publicDocumentRoot
+     * @param OutputStyle|null $output
+     * @param array<GenericPersistence>|null $this->wsPersistenceOptions
+     * @param Manager|null $manager
+     */
     public function __construct(
         private readonly ?string $host = null,
-        private readonly ?int $port = null,
+        private ?int $port = null,
         ?string $inputFile = null,
         private readonly ?string $documentRoot = null,
         private readonly ?string $publicDocumentRoot = null,
         private readonly ?OutputStyle $output = null,
+        private ?array $wsPersistenceOptions = null,
+        private ?Manager $manager = null,
     ) {
         $this->inputFile = $inputFile ?? config(
             'jacked-server.input-file',
@@ -50,56 +85,60 @@ class Server
             'path' => config('jacked-server.log.path', storage_path('logs/jacked-server.log')),
             'replace_placeholders' => config('jacked-server.log.replace-placeholders', 'single'),
         ]);
-        $this->wsPersistence = [new ChannelsPersistence, new AssociationsPersistence, new ListenersPersistence];
+
+        if (Storage::exists($this->executionHolder)) {
+            Storage::delete($this->executionHolder);
+        }
     }
 
     public function run(): void
     {
         $ssl = config('jacked-server.ssl-enabled', false);
-        $primaryPort = $ssl ? config('jacked-server.ssl-port', 443) : config('jacked-server.port', 8080);
-        $serverConfig = array_merge(config('jacked-server.openswoole-server-settings', [
-            'document_root' => $this->publicDocumentRoot ?? public_path(),
-            'enable_static_handler' => true,
-            'static_handler_locations' => [ '/imgs', '/css' ],
-            // reactor and workers
-            'reactor_num' => Util::getCPUNum() + 2,
-            'worker_num' => Util::getCPUNum() + 2,
-            // timeout
-            'max_request_execution_time' => config('jacked-server.timeout', 60),
-        ]), ($ssl ? [
-            'ssl_cert_file' => config('jacked-server.ssl-cert-file'),
-            'ssl_key_file' => config('jacked-server.ssl-key-file'),
-            'open_http_protocol' => true,
-        ] : []));
-
-        Conveyor::refresh($this->wsPersistence);
-
-        $server = new OpenSwooleServer(
-            $this->host ?? config('jacked-server.host', '0.0.0.0'),
-            $this->port ?? $primaryPort,
-            config('jacked-server.server-type', OpenSwooleBaseServer::POOL_MODE),
-            $ssl ? Constant::SOCK_TCP | Constant::SSL : Constant::SOCK_TCP,
-        );
-        $server->set($serverConfig);
-        $server->on('start', [$this, 'handleStart']);
-
-        // ssl
-        if ($ssl) {
-            $secondaryPort = $server->listen(
-                $this->host ?? config('jacked-server.host', '0.0.0.0'),
-                config('jacked-server.port', 8080),
-                Constant::SOCK_TCP
+        if (null !== $this->port && $ssl) {
+            $this->logger->warning(
+                'SSL is enabled, but a port was specified. ' .
+                'The port will be ignored in favor of the SSL port.',
             );
+            $this->output->warning(
+                'SSL is enabled, but a port was specified. ' .
+                'The port will be ignored in favor of the SSL port.',
+            );
+            $this->port = null;
+        }
+        $host = $this->host ?? config('jacked-server.host', '0.0.0.0');
+        $primaryPort = $ssl ? config('jacked-server.ssl-port', 443) : config('jacked-server.port', 8080);
 
-            $secondaryPort->on('request', [$this, 'sslRedirectRequest']);
+        if (false === config('jacked-server.websocket.enabled', true)) {
+            // TODO: craft HTTP only server
+            throw new Exception('WebSockets are not enabled! HTTP only servers are not available yet by Jacked Server.');
         }
 
-        $server->on('request', [$this, 'handleRequest']);
-        $server->on('message', [$this, 'handleWsMessage']);
-        $server->on('handshake', [$this, 'handleWsHandshake']);
-        $server->on('open', [$this, 'handleWsOpen']);
+        $this->wsPersistence = Conveyor::defaultPersistence();
 
-        $server->start();
+        ConveyorServer::start(
+            host: $host,
+            port: $this->port ?? $primaryPort,
+            mode: config('jacked-server.server-type', OpenSwooleBaseServer::POOL_MODE),
+            ssl: $ssl ? Constant::SOCK_TCP | Constant::SSL : Constant::SOCK_TCP,
+            serverOptions: $this->getServerConfig($ssl),
+            eventListeners: [
+                ConveyorServer::EVENT_SERVER_STARTED => fn(ServerStartedEvent $event) => $this->handleStart($event->server),
+                ConveyorServer::EVENT_PRE_SERVER_START => function (PreServerStartEvent $event) use ($ssl) {
+                    if ($ssl) {
+                        $event->server->listen(
+                            $event->server->host,
+                            config('jacked-server.port', 8080),
+                            Constant::SOCK_TCP,
+                        )->on('request', [$this, 'sslRedirectRequest']);
+                    }
+                    $event->server->on('request', [$this, 'handleRequest']);
+                    $event->server->on('handshake', [$this, 'handleWsHandshake']);
+                    $event->server->on('open', [$this, 'handleWsOpen']);
+                },
+                ConveyorServer::EVENT_MESSAGE_RECEIVED => [$this, 'handleWsMessage'],
+            ],
+            persistence: $this->wsPersistence,
+        );
     }
 
     public function handleWsOpen(OpenSwooleServer $server, Request $request): void
@@ -123,6 +162,37 @@ class Server
             return false;
         }
 
+        // check for authorization
+        try {
+            $broadcaster = rescue(fn() => Broadcast::driver('conveyor'));
+            $wsAuth = config('jacked-server.websocket.broadcaster');
+
+            parse_str(Arr::get($request->server, 'query_string') ?? '', $query);
+            $token = Arr::get($query, 'token');
+
+            if ($wsAuth && null === $token) {
+                throw new Exception('Not authorized!');
+            }
+
+            if ($wsAuth && null !== $broadcaster) {
+                $user = Token::byToken($token)->first()?->user;
+                $broadcaster->validateConnection($token);
+                $broadcaster->associateUser(
+                    fd: $request->fd,
+                    user: $user,
+                    assocPersistence: Arr::get($this->wsPersistence, 'user-associations'),
+                );
+            }
+        } catch (Exception $e) {
+            file_put_contents('/var/www/laravel-example/packages/jacked-php/jacked-server/test.txt', json_encode([
+                'error' => $e->getMessage(),
+                'this' => get_class($this),
+            ]) . PHP_EOL, FILE_APPEND);
+            $response->status(401);
+            $response->end($e->getMessage());
+            return false;
+        }
+
         foreach($headers as $headerKey => $val) {
             $response->header($headerKey, $val);
         }
@@ -133,12 +203,15 @@ class Server
         return true;
     }
 
-    public function handleWsMessage(OpenSwooleServer $server, Frame $frame): void
+    public function handleWsMessage(MessageReceivedEvent $event): void
     {
-        $this->logger->info($this->logPrefix . ' Message received from ' . $frame->fd);
-        Conveyor::run($frame->data, $frame->fd, $server, [
-            'persistence' => $this->wsPersistence,
-        ]);
+        $parsedData = json_decode($event->data);
+
+        if (!Storage::exists($this->executionHolder)) {
+            Storage::put($this->executionHolder, $event->server->getWorkerId());
+        }
+
+        $this->logger->info($this->logPrefix . ' Message received from ' . $parsedData->fd);
     }
 
     public function sslRedirectRequest(Request $request, Response $response): void
@@ -169,44 +242,17 @@ class Server
 
     public function handleRequest(Request $request, Response $response): void
     {
-        [ $requestOptions, $content ] = $this->gatherRequestInfo($request);
+        try {
+            [ $requestOptions, $content ] = $this->gatherRequestInfo($request);
+        } catch (RedirectException $e) {
+            $response->status(302);
+            $response->redirect($e->getMessage());
+            return;
+        }
 
         $jackedResponse = $this->executeRequest($requestOptions, $content);
 
         $this->sendResponse($response, $jackedResponse);
-    }
-
-    /**
-     * @param Request $request
-     * @return array
-     * @throws Exception
-     */
-    private function processSecWebSocketKey(Request $request): array
-    {
-        $secWebSocketKey = $request->header['sec-websocket-key'];
-        $patten = '#^[+/0-9A-Za-z]{21}[AQgw]==$#';
-
-        if (
-            0 === preg_match($patten, $secWebSocketKey)
-            || 16 !== strlen(base64_decode($secWebSocketKey))
-        ) {
-            throw new Exception('Invalid Sec-WebSocket-Key');
-        }
-
-        $key = base64_encode(sha1($request->header['sec-websocket-key'] . '258EAFA5-E914-47DA-95CA-C5AB0DC85B11', true));
-
-        $headers = [
-            'Upgrade' => 'websocket',
-            'Connection' => 'Upgrade',
-            'Sec-WebSocket-Accept' => $key,
-            'Sec-WebSocket-Version' => '13',
-        ];
-
-        if(isset($request->header['sec-websocket-protocol'])) {
-            $headers['Sec-WebSocket-Protocol'] = $request->header['sec-websocket-protocol'];
-        }
-
-        return $headers;
     }
 
     private function sendResponse(Response $response, JackedResponse $jackedResponse): void
@@ -251,207 +297,21 @@ class Server
         }
     }
 
-    private function isValidFastcgiResponse(string $fastCgiResponse): bool
+    private function getServerConfig(bool $ssl): array
     {
-        return !str_contains($fastCgiResponse, 'Content-Type:')
-            && !str_contains($fastCgiResponse, 'Content-type:')
-            && !str_contains($fastCgiResponse, 'content-type:');
-    }
-
-    private function gatherRequestInfo(Request $request): array
-    {
-        $content = $request->getContent();
-        $requestOptions = $this->prepareRequestOptions(
-            method: $request->getMethod(),
-            serverInfo: array_change_key_case($request->server),
-            header: array_change_key_case($request->header),
-            cookies: array_change_key_case($request->cookie ?? []),
-            contentLength: strlen($content),
-        );
-        $this->requestUriTweak($requestOptions);
-        event(JackedRequestReceived::class, $requestOptions, $content);
-
-        return [ $requestOptions, $content ];
-    }
-
-    private function requestUriTweak(array &$requestOptions): void
-    {
-        if (
-            !empty($requestOptions['QUERY_STRING'])
-            && !str_contains($requestOptions['REQUEST_URI'], '?')
-        ) {
-            $requestOptions['REQUEST_URI'] .= '?' . $requestOptions['QUERY_STRING'];
-        }
-    }
-
-    private function prepareRequestOptions(
-        string $method,
-        array $serverInfo,
-        array $header,
-        array $cookies,
-        int $contentLength,
-    ): array {
-        $this->logger->debug($this->logPrefix . ' Debug: prepare request options', [
-            'method' => $method,
-            'serverInfo' => $serverInfo,
-            'header' => $header,
-            'cookies' => $cookies,
-            'contentLength' => $contentLength,
-        ]);
-
-        $requestOptions = [];
-        $this->addServerInfo($requestOptions, $serverInfo);
-        $this->addHeaders($requestOptions, $header);
-        $this->addCookies($requestOptions, $cookies);
-
-        $requestUri = Arr::get($serverInfo, 'request_uri', '');
-        return array_change_key_case(array_filter(array_merge($requestOptions, [
-            'path_info' => $this->getPathInfo($serverInfo),
-            'document_root' => $this->getDocumentRoot(''),
-            'request_method' => $method,
-            'script_name' => $this->getScriptName($requestUri),
-            'script_filename' => $this->getScriptFilename($requestUri),
-            'content_length' => $contentLength,
-            'server_protocol' => Arr::get($serverInfo, 'server_protocol', config('jacked-server.server-protocol', 'HTTP/1.1')),
-            'server_name' => Arr::get($requestOptions, 'http_host'),
-        ])), CASE_UPPER);
-    }
-
-    private function getPathInfo(array $serverInfo): string
-    {
-        return Arr::get($serverInfo, 'path_info', '');
-    }
-
-    /**
-     * If the server root is needed, pass the $requestUri as empty string('').
-     * If the file requested root is needed, pass the real $requestUri.
-     *
-     * @param string $requestUri
-     * @return string
-     */
-    private function getDocumentRoot(string $requestUri): string
-    {
-        $documentRoot = $this->documentRoot
-            ?? config('jacked-server.openswoole-server-settings.document_root')
-            ?? public_path();
-
-        if (is_dir($documentRoot . $requestUri)) {
-            return $documentRoot . $requestUri;
-        }
-
-        return $documentRoot;
-    }
-
-    private function getInputFile(): string
-    {
-        return $this->inputFile;
-    }
-
-    private function getScriptName(string $requestUri): string
-    {
-        if (is_file($this->getDocumentRoot('') . '/' . ltrim($requestUri, '/'))) {
-            return $requestUri;
-        }
-
-        return (!empty($requestUri) ? rtrim($requestUri, '/') . '/' : '')
-            . basename($this->getInputFile());
-    }
-
-    private function getScriptFilename(string $requestUri): string
-    {
-        if (is_file($this->getDocumentRoot('') . $requestUri)) {
-            return $this->getDocumentRoot($requestUri) . $requestUri;
-        }
-
-        return rtrim($this->getDocumentRoot($requestUri), '/') . '/' . basename($this->getInputFile());
-    }
-
-    private function addServerInfo(array &$requestOptions, array $serverInfo = []): void
-    {
-        foreach ($serverInfo as $key => $value) {
-            $requestOptions[$key] = $value;
-        }
-    }
-
-    private function addHeaders(array &$requestOptions, array $headers = []): void
-    {
-        foreach ($headers as $key => $value) {
-            $key = str_replace('-', '_', $key);
-            $requestOptions['http_' . $key] = $value;
-            $requestOptions[$key] = $value;
-        }
-    }
-
-    private function addCookies(array &$requestOptions, array $cookies = []): void
-    {
-        $cookieStr = '';
-        foreach ($cookies ?? [] as $key => $value) {
-            $cookieStr .= $key . '=' . $value . '; ';
-        }
-
-        $cookieStr = rtrim($cookieStr, '; ');
-        if (!empty($cookieStr)) {
-            $requestOptions['http_cookie'] = $cookieStr;
-        }
-    }
-
-    private function executeRequest(array $requestOptions, string $content): JackedResponse
-    {
-        $result = '';
-        $error = '';
-
-        $startTime = microtime(true);
-        $startMemory = memory_get_usage();
-
-        try {
-            $this->logger->info($this->logPrefix . 'Request: {requestInfo}', [
-                'pathInfo' => Arr::get($requestOptions, 'PATH_INFO'),
-                'requestOptions' => $requestOptions,
-                'content' => $content,
-            ]);
-            $this->logger->info($this->logPrefix . 'Request Time: {time}', [
-                'time' => Carbon::now()->format('Y-m-d H:i:s'),
-            ]);
-            $client = new Client(
-                host: config('jacked-server.fastcgi.host', '127.0.0.1'),
-                port: config('jacked-server.fastcgi.port', 9000),
-            );
-            $client->setConnectTimeout(
-                config('jacked-server.timeout', 60) * 1000,
-            );
-            $client->setReadWriteTimeout(
-                config('jacked-server.readwrite-timeout', 60) * 1000,
-            );
-            $result = ($client)->request($requestOptions, $content);
-        } catch (Exception $e) {
-            $error = $e->getMessage();
-
-            if ($this->output instanceof OutputStyle) {
-                $this->output->error('Jacked Server Error: ' . $error);
-            } else {
-                echo 'Jacked Server Error: ' . $error . PHP_EOL;
-            }
-
-            $this->logger->info($this->logPrefix . 'Request Error: {errorMessage}', [
-                'errorMessage' => $error,
-            ]);
-        }
-
-        $endTime = microtime(true);
-        $endMemory = memory_get_usage();
-        $timeTaken = $endTime - $startTime;
-        $memoryUsed = $endMemory - $startMemory;
-        $this->logger->info($this->logPrefix . 'Request Time taken: {timeTaken}', [
-            'timeTaken' => round($timeTaken, 5) . ' seconds',
-        ]);
-        $this->logger->info($this->logPrefix . 'Request Memory used: {memoryUsed}', [
-            'memoryUsed' => number_format($memoryUsed) . ' bytes',
-        ]);
-
-        if ($this->isValidFastcgiResponse($result)) {
-            $error = $result;
-        }
-
-        return new JackedResponse($result, $error, $timeTaken);
+        return array_merge(config('jacked-server.openswoole-server-settings', [
+            'document_root' => $this->publicDocumentRoot ?? public_path(),
+            'enable_static_handler' => true,
+            'static_handler_locations' => [ '/imgs', '/css' ],
+            // reactor and workers
+            'reactor_num' => Util::getCPUNum() + 2,
+            'worker_num' => Util::getCPUNum() + 2,
+            // timeout
+            'max_request_execution_time' => config('jacked-server.timeout', 60),
+        ]), ($ssl ? [
+            'ssl_cert_file' => config('jacked-server.ssl-cert-file'),
+            'ssl_key_file' => config('jacked-server.ssl-key-file'),
+            'open_http_protocol' => true,
+        ] : []));
     }
 }

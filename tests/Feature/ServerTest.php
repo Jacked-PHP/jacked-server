@@ -1,18 +1,20 @@
 <?php
 
-namespace Tests\Unit;
+namespace Tests\Feature;
 
-use Exception;
 use Illuminate\Support\Facades\Http;
+use Tests\Feature\Traits\ServerTrait;
 use Tests\TestCase;
 
 class ServerTest extends TestCase
 {
+    use ServerTrait;
+
     public function test_can_set_custom_input_file()
     {
         $this->startServer(
-            rtrim(__DIR__, '/Unit') . '/Assets/assert-ok.php',
-            rtrim(__DIR__, '/Unit') . '/Assets',
+            rtrim(__DIR__, '/Feature') . '/Assets/assert-ok.php',
+            rtrim(__DIR__, '/Feature') . '/Assets',
         );
 
         $response = Http::get('http://127.0.0.1:' . $this->port . '/assert-ok.php');
@@ -22,6 +24,7 @@ class ServerTest extends TestCase
 
     public function test_can_run_server()
     {
+        // dd($this->laravelPath);
         $this->startServer(
             $this->laravelPath . '/public/index.php',
         );

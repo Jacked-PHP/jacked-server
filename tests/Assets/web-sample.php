@@ -1,6 +1,11 @@
 <?php
 
+use App\Events\BroadcastSampleEvent;
+use App\Models\User;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
+use Kanata\LaravelBroadcaster\Services\JwtToken;
 
 Route::get('/', function () {
     return 'ok';
@@ -32,4 +37,16 @@ Route::get('/get-404', function () {
 
 Route::get('/get-500', function () {
     return response('500', 500);
+});
+
+Route::middleware('auth:sanctum')->get('/broadcast-sample', function () {
+    Config::set('conveyor.query', 'token=' . JwtToken::create(
+        name: 'test-1',
+        userId: auth()->user()->id,
+        expire: 60,
+        useLimit: 1,
+    )->token);
+
+    broadcast(new BroadcastSampleEvent);
+    return response('dispatched', 200);
 });
