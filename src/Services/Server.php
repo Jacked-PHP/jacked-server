@@ -184,10 +184,6 @@ class Server
                 );
             }
         } catch (Exception $e) {
-            file_put_contents('/var/www/laravel-example/packages/jacked-php/jacked-server/test.txt', json_encode([
-                'error' => $e->getMessage(),
-                'this' => get_class($this),
-            ]) . PHP_EOL, FILE_APPEND);
             $response->status(401);
             $response->end($e->getMessage());
             return false;
