@@ -206,8 +206,7 @@ trait HttpSupport
             return $requestUri;
         }
 
-        return (!empty($requestUri) ? rtrim($requestUri, '/') . '/' : '')
-            . basename($this->getInputFile());
+        return '';
     }
 
     private function getInputFile(): string
