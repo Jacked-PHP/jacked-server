@@ -110,7 +110,10 @@ class Server
 
         if (false === config('jacked-server.websocket.enabled', true)) {
             // TODO: craft HTTP only server
-            throw new Exception('WebSockets are not enabled! HTTP only servers are not available yet by Jacked Server.');
+            throw new Exception(
+                'WebSockets are not enabled! HTTP only servers are not ' .
+                'available yet by Jacked Server.',
+            );
         }
 
         $this->wsPersistence = Conveyor::defaultPersistence();
@@ -122,7 +125,8 @@ class Server
             ssl: $ssl ? Constant::SOCK_TCP | Constant::SSL : Constant::SOCK_TCP,
             serverOptions: $this->getServerConfig($ssl),
             eventListeners: [
-                ConveyorServer::EVENT_SERVER_STARTED => fn(ServerStartedEvent $event) => $this->handleStart($event->server),
+                ConveyorServer::EVENT_SERVER_STARTED => fn(ServerStartedEvent $event) =>
+                    $this->handleStart($event->server),
                 ConveyorServer::EVENT_PRE_SERVER_START => function (PreServerStartEvent $event) use ($ssl) {
                     if ($ssl) {
                         $event->server->listen(
@@ -189,7 +193,7 @@ class Server
             return false;
         }
 
-        foreach($headers as $headerKey => $val) {
+        foreach ($headers as $headerKey => $val) {
             $response->header($headerKey, $val);
         }
 
@@ -277,7 +281,16 @@ class Server
 
         // header
         foreach ($headers as $headerKey => $headerValue) {
-            $response->header($headerKey, $headerValue);
+            rescue(
+                fn() => $response->header($headerKey, $headerValue),
+                function () use ($status, $headers) {
+                    $this->logger->error('Server Error', [
+                        'headers' => $headers,
+                        'status' => $status,
+                    ]);
+                },
+                false,
+            );
         }
 
         // status
