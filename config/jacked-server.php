@@ -1,8 +1,5 @@
 <?php
 
-use JackedPhp\JackedServer\Events\JackedRequestReceived;
-use JackedPhp\JackedServer\Events\JackedServerStarted;
-
 return [
     // ------------------------------------------------------------
     // Running server details

@@ -9,12 +9,12 @@ use Conveyor\Events\PreServerStartEvent;
 use Conveyor\Events\ServerStartedEvent;
 use Conveyor\Persistence\Abstracts\GenericPersistence;
 use Exception;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Console\OutputStyle;
 use Illuminate\Database\Capsule\Manager;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Broadcast;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use JackedPhp\JackedServer\Events\JackedRequestError;
@@ -30,7 +30,6 @@ use OpenSwoole\Http\Request;
 use OpenSwoole\Http\Response;
 use OpenSwoole\Server as OpenSwooleBaseServer;
 use OpenSwoole\Util;
-use OpenSwoole\WebSocket\Frame;
 use OpenSwoole\WebSocket\Server as OpenSwooleServer;
 use Psr\Log\LoggerInterface;
 
@@ -175,7 +174,7 @@ class Server
             $token = Arr::get($query, 'token');
 
             if ($wsAuth && null === $token) {
-                throw new Exception('Not authorized!');
+                throw new AuthorizationException('WebSocket Connection Not authorized!');
             }
 
             if ($wsAuth && null !== $broadcaster) {
@@ -187,8 +186,14 @@ class Server
                     assocPersistence: Arr::get($this->wsPersistence, 'user-associations'),
                 );
             }
-        } catch (Exception $e) {
+        } catch (AuthorizationException $e) {
+            $this->logger->info($this->logPrefix . $e->getMessage());
             $response->status(401);
+            $response->end($e->getMessage());
+            return false;
+        } catch (Exception $e) {
+            $this->logger->error($this->logPrefix . 'Websocket Handshake Exception: ' . $e->getMessage());
+            $response->status(500);
             $response->end($e->getMessage());
             return false;
         }
