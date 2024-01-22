@@ -1200,16 +1200,16 @@
         },
         {
             "name": "kanata-php/socket-conveyor",
-            "version": "2.0.7",
+            "version": "2.0.8",
             "source": {
                 "type": "git",
                 "url": "https://github.com/kanata-php/socket-conveyor.git",
-                "reference": "1fd51f55a5c3c97904672fd16d7c54dc52119dc3"
+                "reference": "27c9ffee27af529498ea08e9ebf7306df66c4d8f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/kanata-php/socket-conveyor/zipball/1fd51f55a5c3c97904672fd16d7c54dc52119dc3",
-                "reference": "1fd51f55a5c3c97904672fd16d7c54dc52119dc3",
+                "url": "https://api.github.com/repos/kanata-php/socket-conveyor/zipball/27c9ffee27af529498ea08e9ebf7306df66c4d8f",
+                "reference": "27c9ffee27af529498ea08e9ebf7306df66c4d8f",
                 "shasum": ""
             },
             "require": {
@@ -1247,7 +1247,7 @@
             "description": "A WebSocket/Socket message Router",
             "support": {
                 "issues": "https://github.com/kanata-php/socket-conveyor/issues",
-                "source": "https://github.com/kanata-php/socket-conveyor/tree/2.0.7"
+                "source": "https://github.com/kanata-php/socket-conveyor/tree/2.0.8"
             },
             "funding": [
                 {
@@ -1255,7 +1255,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2024-01-16T03:24:54+00:00"
+            "time": "2024-01-22T05:29:13+00:00"
         },
         {
             "name": "laravel/framework",
@@ -8141,16 +8141,16 @@
         },
         {
             "name": "orchestra/testbench",
-            "version": "v8.21.0",
+            "version": "v8.21.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/orchestral/testbench.git",
-                "reference": "f2860d424e8ef7eb445b1081eab2a54d493e14b5"
+                "reference": "c22a81802a68e746e032edf65cbb68af28a52670"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/orchestral/testbench/zipball/f2860d424e8ef7eb445b1081eab2a54d493e14b5",
-                "reference": "f2860d424e8ef7eb445b1081eab2a54d493e14b5",
+                "url": "https://api.github.com/repos/orchestral/testbench/zipball/c22a81802a68e746e032edf65cbb68af28a52670",
+                "reference": "c22a81802a68e746e032edf65cbb68af28a52670",
                 "shasum": ""
             },
             "require": {
@@ -8158,7 +8158,7 @@
                 "fakerphp/faker": "^1.21",
                 "laravel/framework": "^10.40",
                 "mockery/mockery": "^1.5.1",
-                "orchestra/testbench-core": "^8.21",
+                "orchestra/testbench-core": "^8.21.1",
                 "orchestra/workbench": "^1.2 || ^8.2",
                 "php": "^8.1",
                 "phpunit/phpunit": "^9.6 || ^10.1",
@@ -8190,22 +8190,22 @@
             ],
             "support": {
                 "issues": "https://github.com/orchestral/testbench/issues",
-                "source": "https://github.com/orchestral/testbench/tree/v8.21.0"
+                "source": "https://github.com/orchestral/testbench/tree/v8.21.1"
             },
-            "time": "2024-01-19T14:57:29+00:00"
+            "time": "2024-01-22T03:22:22+00:00"
         },
         {
             "name": "orchestra/testbench-core",
-            "version": "v8.21.0",
+            "version": "v8.21.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/orchestral/testbench-core.git",
-                "reference": "34038bbc26dfb2305297c664efad1d5be3918ee2"
+                "reference": "c6bf49a1b7ef4afe58e5bda676158c4de41f9a81"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/orchestral/testbench-core/zipball/34038bbc26dfb2305297c664efad1d5be3918ee2",
-                "reference": "34038bbc26dfb2305297c664efad1d5be3918ee2",
+                "url": "https://api.github.com/repos/orchestral/testbench-core/zipball/c6bf49a1b7ef4afe58e5bda676158c4de41f9a81",
+                "reference": "c6bf49a1b7ef4afe58e5bda676158c4de41f9a81",
                 "shasum": ""
             },
             "require": {
@@ -8284,7 +8284,7 @@
                 "issues": "https://github.com/orchestral/testbench/issues",
                 "source": "https://github.com/orchestral/testbench-core"
             },
-            "time": "2024-01-19T14:40:27+00:00"
+            "time": "2024-01-22T01:45:47+00:00"
         },
         {
             "name": "orchestra/workbench",
