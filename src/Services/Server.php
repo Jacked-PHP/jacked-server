@@ -216,7 +216,11 @@ class Server
             Storage::put($this->executionHolder, $event->server->getWorkerId());
         }
 
-        $this->logger->info($this->logPrefix . ' Message received from ' . $parsedData?->fd);
+        if (null === $parsedData) {
+            return;
+        }
+
+        $this->logger->info($this->logPrefix . ' Message received from ' . $parsedData->fd);
     }
 
     public function sslRedirectRequest(Request $request, Response $response): void
