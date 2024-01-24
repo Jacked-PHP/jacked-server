@@ -136,21 +136,11 @@ class Server
                     }
                     $event->server->on('request', [$this, 'handleRequest']);
                     $event->server->on('handshake', [$this, 'handleWsHandshake']);
-                    $event->server->on('open', [$this, 'handleWsOpen']);
                 },
                 ConveyorServer::EVENT_MESSAGE_RECEIVED => [$this, 'handleWsMessage'],
             ],
             persistence: $this->wsPersistence,
         );
-    }
-
-    public function handleWsOpen(OpenSwooleServer $server, Request $request): void
-    {
-        $message = 'OpenSwoole Connection opened'
-            . ' with FD: ' . $request->fd
-            . ' on ' . $server->host . ':' . $server->port
-            . ' at ' . Carbon::now()->format('Y-m-d H:i:s');
-        $this->logger->info($this->logPrefix . $message);
     }
 
     public function handleWsHandshake(Request $request, Response $response): bool
