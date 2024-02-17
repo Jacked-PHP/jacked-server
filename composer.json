@@ -19,7 +19,7 @@
         "ext-openswoole": "22.*",
         "adoy/fastcgi-client": "^1.0",
         "guzzlehttp/guzzle": "^7.7",
-        "kanata-php/socket-conveyor": "^2.0",
+        "kanata-php/socket-conveyor": "^2.1",
         "textalk/websocket": "^1.5",
         "kanata-php/conveyor-laravel-broadcaster": "^0.0",
         "laravel/sanctum": "^3.3"

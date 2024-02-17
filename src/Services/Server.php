@@ -4,6 +4,7 @@ namespace JackedPhp\JackedServer\Services;
 
 use Conveyor\Conveyor;
 use Conveyor\ConveyorServer;
+use Conveyor\Constants as ConveyorConstants;
 use Conveyor\Events\MessageReceivedEvent;
 use Conveyor\Events\PreServerStartEvent;
 use Conveyor\Events\ServerStartedEvent;
@@ -124,9 +125,9 @@ class Server
             ssl: $ssl ? Constant::SOCK_TCP | Constant::SSL : Constant::SOCK_TCP,
             serverOptions: $this->getServerConfig($ssl),
             eventListeners: [
-                ConveyorServer::EVENT_SERVER_STARTED => fn(ServerStartedEvent $event) =>
+                ConveyorConstants::EVENT_SERVER_STARTED => fn(ServerStartedEvent $event) =>
                     $this->handleStart($event->server),
-                ConveyorServer::EVENT_PRE_SERVER_START => function (PreServerStartEvent $event) use ($ssl) {
+                ConveyorConstants::EVENT_PRE_SERVER_START => function (PreServerStartEvent $event) use ($ssl) {
                     if ($ssl) {
                         $event->server->listen(
                             $event->server->host,
@@ -137,7 +138,7 @@ class Server
                     $event->server->on('request', [$this, 'handleRequest']);
                     $event->server->on('handshake', [$this, 'handleWsHandshake']);
                 },
-                ConveyorServer::EVENT_MESSAGE_RECEIVED => [$this, 'handleWsMessage'],
+                ConveyorConstants::EVENT_MESSAGE_RECEIVED => [$this, 'handleWsMessage'],
             ],
             persistence: $this->wsPersistence,
         );
