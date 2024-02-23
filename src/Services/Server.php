@@ -2,6 +2,7 @@
 
 namespace JackedPhp\JackedServer\Services;
 
+use Conveyor\Constants;
 use Conveyor\Conveyor;
 use Conveyor\ConveyorServer;
 use Conveyor\Constants as ConveyorConstants;
@@ -124,6 +125,7 @@ class Server
             mode: config('jacked-server.server-type', OpenSwooleBaseServer::POOL_MODE),
             ssl: $ssl ? Constant::SOCK_TCP | Constant::SSL : Constant::SOCK_TCP,
             serverOptions: $this->getServerConfig($ssl),
+            conveyorOptions: config('jacked-server.conveyor-options', []),
             eventListeners: [
                 ConveyorConstants::EVENT_SERVER_STARTED => fn(ServerStartedEvent $event) =>
                     $this->handleStart($event->server),
