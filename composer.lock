@@ -2306,20 +2306,20 @@
         },
         {
             "name": "kanata-php/socket-conveyor",
-            "version": "2.1.0",
+            "version": "2.1.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/kanata-php/socket-conveyor.git",
-                "reference": "38953fdcb891e17ef138fa008fde15a5c517ca31"
+                "reference": "4b90d5dd3a26e29e669a7bbef85030a9f7599e47"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/kanata-php/socket-conveyor/zipball/38953fdcb891e17ef138fa008fde15a5c517ca31",
-                "reference": "38953fdcb891e17ef138fa008fde15a5c517ca31",
+                "url": "https://api.github.com/repos/kanata-php/socket-conveyor/zipball/4b90d5dd3a26e29e669a7bbef85030a9f7599e47",
+                "reference": "4b90d5dd3a26e29e669a7bbef85030a9f7599e47",
                 "shasum": ""
             },
             "require": {
-                "ext-openswoole": "^22.1",
+                "ext-openswoole": "^22.0|^22.1",
                 "illuminate/database": "^10.22",
                 "league/pipeline": "^1.0",
                 "lotharthesavior/hook": "^0.0.1",
@@ -2354,7 +2354,7 @@
             "description": "A WebSocket/Socket message Router",
             "support": {
                 "issues": "https://github.com/kanata-php/socket-conveyor/issues",
-                "source": "https://github.com/kanata-php/socket-conveyor/tree/2.1.0"
+                "source": "https://github.com/kanata-php/socket-conveyor/tree/2.1.1"
             },
             "funding": [
                 {
@@ -2362,7 +2362,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2024-02-11T18:22:37+00:00"
+            "time": "2024-02-23T12:32:11+00:00"
         },
         {
             "name": "kelunik/certificate",
