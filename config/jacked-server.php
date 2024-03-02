@@ -71,4 +71,18 @@ return [
         'enabled' => env('JACKED_SERVER_WEBSOCKET_ENABLED', true),
         'broadcaster' => false,
     ],
+
+    // ------------------------------------------------------------
+    // Proxy
+    // ------------------------------------------------------------
+
+    'proxy' => [
+        'enabled' => env('JACKED_SERVER_PROXY_ENABLED', false),
+        'host' => env('JACKED_SERVER_PROXY_HOST', '127.0.0.1'),
+        'port' => env('JACKED_SERVER_PROXY_PORT', 3000),
+        'allowed-headers' => [
+            'content-type',
+        ],
+        'timeout' => env('JACKED_SERVER_PROXY_TIMEOUT', 5),
+    ],
 ];

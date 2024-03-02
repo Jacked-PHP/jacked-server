@@ -11,6 +11,8 @@ use JackedPhp\JackedServer\Exceptions\RedirectException;
 use JackedPhp\JackedServer\Services\Response as JackedResponse;
 use OpenSwoole\Http\Request;
 use Illuminate\Console\OutputStyle;
+use OpenSwoole\Coroutine\Http\Client as CoroutineHttpClient;
+use OpenSwoole\Http\Response;
 
 trait HttpSupport
 {
@@ -86,6 +88,47 @@ trait HttpSupport
         ) {
             throw new RedirectException($pathInfo . '/');
         }
+    }
+
+    protected function proxyRequest(
+        Request $request,
+        Response $response,
+        string $host,
+        int $port,
+        array $allowedHeaders,
+    ): void {
+        $this->logger->info($this->logPrefix . 'Proxy Request: {requestInfo}', [
+            'pathInfo' => $request->server['path_info'] ?? '',
+            'requestOptions' => $request->server,
+            'content' => $request->rawContent(),
+        ]);
+        $this->logger->info($this->logPrefix . 'Request Time: {time}', [
+            'time' => Carbon::now()->format('Y-m-d H:i:s'),
+        ]);
+
+        $client = new CoroutineHttpClient($host, $port);
+        $client->setHeaders([
+            'Host' => $host,
+            'User-Agent' => 'Jacked Server HTTP Proxy',
+        ]);
+        $client->set([ 'timeout' => config(
+            key: 'jacked-server.proxy.timeout',
+            default: 5,
+        )]);
+        $status = $client->execute($request->server['request_uri']);
+
+        $headers = $client->headers;
+        $body = $client->body;
+        $client->close();
+
+        foreach ($headers ?? [] as $key => $value) {
+            if (in_array($key, $allowedHeaders)) {
+                $response->header($key, $value);
+            }
+        }
+        $response->status($status);
+
+        $response->end($body);
     }
 
     protected function executeRequest(array $requestOptions, string $content): JackedResponse

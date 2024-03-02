@@ -244,6 +244,19 @@ class Server
 
     public function handleRequest(Request $request, Response $response): void
     {
+        if (config('jacked-server.proxy.enabled', false)) {
+            $this->proxyRequest(
+                request: $request,
+                response: $response,
+                host: config('jacked-server.proxy.host', '127.0.0.1'),
+                port: config('jacked-server.proxy.port', 3000),
+                allowedHeaders: config('jacked-server.proxy.allowed-headers', [
+                    'content-type',
+                ]),
+            );
+            return;
+        }
+
         try {
             [ $requestOptions, $content ] = $this->gatherRequestInfo($request);
         } catch (RedirectException $e) {
@@ -252,6 +265,7 @@ class Server
             return;
         }
 
+        /** @var JackedResponse $jackedResponse */
         $jackedResponse = $this->executeRequest($requestOptions, $content);
 
         $this->sendResponse($response, $jackedResponse);
