@@ -2,7 +2,6 @@
 
 namespace JackedPhp\JackedServer\Services;
 
-use Conveyor\Constants;
 use Conveyor\Conveyor;
 use Conveyor\ConveyorServer;
 use Conveyor\Constants as ConveyorConstants;
@@ -11,6 +10,7 @@ use Conveyor\Events\PreServerStartEvent;
 use Conveyor\Events\ServerStartedEvent;
 use Conveyor\Persistence\Abstracts\GenericPersistence;
 use Exception;
+use Hook\Filter;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Console\OutputStyle;
 use Illuminate\Database\Capsule\Manager;
@@ -92,6 +92,9 @@ class Server
         }
     }
 
+    /**
+     * @throws Exception
+     */
     public function run(): void
     {
         $ssl = config('jacked-server.ssl-enabled', false);
@@ -160,7 +163,10 @@ class Server
 
         // check for authorization
         try {
-            $broadcaster = rescue(fn() => Broadcast::driver('conveyor'));
+            $broadcaster = rescue(
+                callback: fn() => Broadcast::driver('conveyor'),
+                report: false,
+            );
             $wsAuth = config('jacked-server.websocket.broadcaster');
 
             parse_str(Arr::get($request->server, 'query_string') ?? '', $query);
@@ -244,15 +250,71 @@ class Server
 
     public function handleRequest(Request $request, Response $response): void
     {
-        if (config('jacked-server.proxy.enabled', false)) {
+        /**
+         * Description: This is a filter for requests proxy.
+         * Name: jacked_proxy_request
+         * Params:
+         *   - $proxyRequest: bool
+         *   - $request: Request
+         * Returns: bool
+         */
+        $proxyRequest = Filter::applyFilters(
+            'jacked_proxy_request',
+            config('jacked-server.proxy.enabled', false),
+            $request,
+        );
+
+        if ($proxyRequest) {
+            /**
+             * Description: This is a filter for proxy host.
+             * Name: jacked_proxy_host
+             * Params:
+             *   - $proxyHost: string
+             *   - $request: Request
+             * Returns: string
+             */
+            $proxyHost = Filter::applyFilters(
+                'jacked_proxy_host',
+                config('jacked-server.proxy.host', '127.0.0.1'),
+                $request,
+            );
+
+            /**
+             * Description: This is a filter for proxy port.
+             * Name: jacked_proxy_port
+             * Params:
+             *   - $proxyPort: int
+             *   - $request: Request
+             * Returns: int
+             */
+            $proxyPort = Filter::applyFilters(
+                'jacked_proxy_port',
+                config('jacked-server.proxy.port', 3000),
+                $request,
+            );
+
+            /**
+             * Description: This is a filter for proxy allowed headers.
+             * Name: jacked_proxy_allowed_headers
+             * Params:
+             *   - $proxyAllowedHeaders: array<array-key, string>
+             *   - $request: Request
+             * Returns: array<array-key, string>
+             */
+            $proxyAllowedHeaders = Filter::applyFilters(
+                'jacked_proxy_allowed_headers',
+                config('jacked-server.proxy.allowed-headers', [
+                    'content-type',
+                ]),
+                $request,
+            );
+
             $this->proxyRequest(
                 request: $request,
                 response: $response,
-                host: config('jacked-server.proxy.host', '127.0.0.1'),
-                port: config('jacked-server.proxy.port', 3000),
-                allowedHeaders: config('jacked-server.proxy.allowed-headers', [
-                    'content-type',
-                ]),
+                host: $proxyHost,
+                port: $proxyPort,
+                allowedHeaders: $proxyAllowedHeaders,
             );
             return;
         }

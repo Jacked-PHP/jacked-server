@@ -4,6 +4,7 @@ namespace JackedPhp\JackedServer\Services\Traits;
 
 use Adoy\FastCGI\Client;
 use Exception;
+use Hook\Filter;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use JackedPhp\JackedServer\Events\JackedRequestReceived;
@@ -90,6 +91,14 @@ trait HttpSupport
         }
     }
 
+    /**
+     * @param Request $request
+     * @param Response $response
+     * @param string $host
+     * @param int $port
+     * @param array<array-key, string> $allowedHeaders
+     * @return void
+     */
     protected function proxyRequest(
         Request $request,
         Response $response,
@@ -229,7 +238,11 @@ trait HttpSupport
             'script_name' => $this->getScriptName($requestUri),
             'script_filename' => $this->getScriptFilename($requestUri),
             'content_length' => $contentLength,
-            'server_protocol' => Arr::get($serverInfo, 'server_protocol', config('jacked-server.server-protocol', 'HTTP/1.1')),
+            'server_protocol' => Arr::get(
+                $serverInfo,
+                'server_protocol',
+                config('jacked-server.server-protocol', 'HTTP/1.1'),
+            ),
             'server_name' => Arr::get($requestOptions, 'http_host'),
         ])), CASE_UPPER);
     }
@@ -266,9 +279,22 @@ trait HttpSupport
      */
     private function getDocumentRoot(string $requestUri): string
     {
-        $documentRoot = $this->documentRoot
-            ?? config('jacked-server.openswoole-server-settings.document_root')
-            ?? public_path();
+        /**
+         * Description: This is a filter for the server's document root.
+         * Name: jacked_document_root
+         * Params:
+         *   - $documentRoot: string
+         *   - $requestUri: string
+         * Returns: string
+         */
+        $documentRoot = $this->documentRoot ?? Filter::applyFilters(
+            'jacked_document_root',
+            config(
+                'jacked-server.openswoole-server-settings.document_root',
+                public_path(),
+            ),
+            $requestUri,
+        );
 
         if (is_dir($documentRoot . $requestUri)) {
             return $documentRoot . $requestUri;
