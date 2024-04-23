@@ -22,7 +22,7 @@
         "kanata-php/socket-conveyor": "^2.1",
         "textalk/websocket": "^1.5",
         "kanata-php/conveyor-laravel-broadcaster": "^0.0",
-        "laravel/sanctum": "^3.3",
+        "laravel/sanctum": "^3.3|^4.0",
         "lotharthesavior/hook": "^0.0.1"
     },
     "extra": {
