@@ -2,13 +2,13 @@
 
 namespace JackedPhp\JackedServer\Services;
 
-use Conveyor\Conveyor;
-use Conveyor\ConveyorServer;
 use Conveyor\Constants as ConveyorConstants;
+use Conveyor\ConveyorServer;
 use Conveyor\Events\MessageReceivedEvent;
 use Conveyor\Events\PreServerStartEvent;
 use Conveyor\Events\ServerStartedEvent;
-use Conveyor\Persistence\Abstracts\GenericPersistence;
+use Conveyor\SubProtocols\Conveyor\Conveyor;
+use Conveyor\SubProtocols\Conveyor\Persistence\Interfaces\GenericPersistenceInterface;
 use Exception;
 use Hook\Filter;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -45,11 +45,6 @@ class Server
     private string $inputFile;
 
     /**
-     * @var array <array-key, GenericPersistenceInterface>
-     */
-    private array $wsPersistence;
-
-    /**
      * We elect the first worker to do the refresh for
      * WebSocket functionalities.
      *
@@ -64,7 +59,7 @@ class Server
      * @param string|null $documentRoot
      * @param string|null $publicDocumentRoot
      * @param OutputStyle|null $output
-     * @param array<GenericPersistence>|null $this->wsPersistenceOptions
+     * @param array<GenericPersistenceInterface> $wsPersistence
      * @param Manager|null $manager
      */
     public function __construct(
@@ -74,7 +69,7 @@ class Server
         private readonly ?string $documentRoot = null,
         private readonly ?string $publicDocumentRoot = null,
         private readonly ?OutputStyle $output = null,
-        private ?array $wsPersistenceOptions = null,
+        private array $wsPersistence = [],
         private ?Manager $manager = null,
     ) {
         $this->inputFile = $inputFile ?? config(
@@ -120,7 +115,10 @@ class Server
             );
         }
 
-        $this->wsPersistence = Conveyor::defaultPersistence();
+        $this->wsPersistence = array_merge(
+            Conveyor::defaultPersistence(),
+            $this->wsPersistence,
+        );
 
         ConveyorServer::start(
             host: $host,
@@ -152,6 +150,7 @@ class Server
     public function handleWsHandshake(Request $request, Response $response): bool
     {
         $this->logger->info($this->logPrefix . ' Handshake received from ' . $request->fd);
+
         // evaluate intention to upgrade to websocket
         try {
             $headers = $this->processSecWebSocketKey($request);

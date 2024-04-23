@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "5c3978c5ee773adcfca6b40ae5d33cf7",
+    "content-hash": "d9f42cb5297d0b3e6fca0650413361e4",
     "packages": [
         {
             "name": "adoy/fastcgi-client",
@@ -11708,7 +11708,9 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": [],
+    "stability-flags": {
+        "kanata-php/socket-conveyor": 10
+    },
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {
