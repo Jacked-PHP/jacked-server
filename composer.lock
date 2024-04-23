@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "d9f42cb5297d0b3e6fca0650413361e4",
+    "content-hash": "79e52a3107f5cf81f3f10d822842e76f",
     "packages": [
         {
             "name": "adoy/fastcgi-client",

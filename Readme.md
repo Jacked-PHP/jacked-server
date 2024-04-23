@@ -95,12 +95,18 @@ It has a Laravel Broadcasting driver. That allows events to be broadcast from th
 
 **Authorization**
 
-The authorization is done via Laravel Sanctum. For this authorization to be activated, you'll need to install and use the package `kanata-php/laravel-broadcaster`. That package will make available the `conveyor` Broadcast driver.
+The authorization is done via Laravel Sanctum. For this authorization to be activated, you'll need to install and use the package `kanata-php/conveyor-laravel-broadcaster`. That package will make available the `conveyor` Broadcast driver.
+
+A dependency for it in Laravel is the `laravel/sanctum` package. You can install it by running:
+
+```shell
+php artisan install:api
+```
 
 To install the package:
 
 ```shell
-composer install kanata-php/laravel-broadcaster
+composer require kanata-php/conveyor-laravel-broadcaster
 ```
 
 At this moment, it works by using JWT Token API generated for one time consumption. It serves to make sure that the frontend client authorizes before connecting to a protected channel. It uses a query string parameter "token", e.g.: `ws://localhost:8080?token=my-token-here`.
