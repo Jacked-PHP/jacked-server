@@ -130,7 +130,7 @@ class Server
 
     public function handleWsHandshake(Request $request, Response $response): bool
     {
-        if (false === config('jacked-server.websocket.enabled', true)) {
+        if (false === config('jacked-server.websocket.enabled')) {
             $response->status(401);
             $response->end('WebSocket Not enabled!');
             return false;
