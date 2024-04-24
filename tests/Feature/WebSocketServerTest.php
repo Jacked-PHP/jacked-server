@@ -115,6 +115,7 @@ class WebSocketServerTest extends TestCase
         $this->startServer(
             inputFile: rtrim(__DIR__, '/Feature') . '/Assets/assert-ok.php',
             documentRoot: rtrim(__DIR__, '/Feature') . '/Assets',
+            websocketEnabled: true,
         );
 
         $response = Http::get('http://127.0.0.1:' . $this->port . '/assert-ok.php');
@@ -149,7 +150,7 @@ class WebSocketServerTest extends TestCase
         $this->prepareDatabase();
         $expectedMessage = 'text-message';
 
-        $this->startServer();
+        $this->startServer(websocketEnabled: true);
 
         $client = $this->getWsClient();
         $client->text($expectedMessage);
@@ -167,7 +168,7 @@ class WebSocketServerTest extends TestCase
         $channel = 'test-channel';
         $channel2 = 'test-channel-2';
 
-        $this->startServer();
+        $this->startServer(websocketEnabled: true);
 
         $address = 'ws://127.0.0.1:' . $this->port;
         $client = new Client($address);
@@ -252,7 +253,10 @@ class WebSocketServerTest extends TestCase
         $channel = 'test-channel';
         $channel2 = 'test-channel-2';
 
-        $this->startServer();
+        $this->startServer(
+            websocketEnabled: true,
+            broadcasterEnabled: true,
+        );
 
         $client = $this->getWsClient();
         $client2 = $this->getWsClient();
@@ -338,7 +342,10 @@ class WebSocketServerTest extends TestCase
         $token = $user->createToken('test');
         $token2 = $user->createToken('test2');
 
-        $this->startServer();
+        $this->startServer(
+            websocketEnabled: true,
+            broadcasterEnabled: true,
+        );
 
         $client = $this->getWsClient(
             token: $this->getWsToken($token, $channel),
@@ -399,7 +406,10 @@ class WebSocketServerTest extends TestCase
             ->createToken('test');
         $token2 = 'invalid-token';
 
-        $this->startServer();
+        $this->startServer(
+            websocketEnabled: true,
+            broadcasterEnabled: true,
+        );
 
         $client = $this->getWsClient(
             token: $this->getWsToken($token, $channel),

@@ -73,6 +73,8 @@ trait ServerTrait
     protected function startServer(
         ?string $inputFile = null,
         ?string $documentRoot = null,
+        bool $websocketEnabled = false,
+        bool $broadcasterEnabled = false,
     ): int {
         if (null !== $inputFile) {
             Config::set(
@@ -86,6 +88,14 @@ trait ServerTrait
                 'jacked-server.openswoole-server-settings.document_root',
                 $documentRoot ?? str_replace('/Feature/Traits', '', __DIR__) . '/Assets/laravel/public',
             );
+        }
+
+        if ($websocketEnabled) {
+            Config::set('jacked-server.websocket.enabled', true);
+        }
+
+        if ($broadcasterEnabled) {
+            Config::set('jacked-server.websocket.broadcaster', true);
         }
 
         $output = $this->get_server_processes();
