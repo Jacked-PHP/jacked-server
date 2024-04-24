@@ -1,8 +1,6 @@
 
 # Jacked Server
 
-[![PHP Composer](https://github.com/Jacked-PHP/jacked-server/actions/workflows/main.yml/badge.svg)](https://github.com/Jacked-PHP/jacked-server/actions/workflows/main.yml)
-
 
 ## Overview
 
