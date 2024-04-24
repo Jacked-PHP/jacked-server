@@ -19,6 +19,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use JackedPhp\JackedServer\Events\JackedRequestError;
 use JackedPhp\JackedServer\Events\JackedRequestFinished;
 use JackedPhp\JackedServer\Events\JackedServerStarted;
@@ -43,14 +44,6 @@ class Server
     private LoggerInterface $logger;
     private string $logPrefix = 'JackedServer: ';
     private string $inputFile;
-
-    /**
-     * We elect the first worker to do the refresh for
-     * WebSocket functionalities.
-     *
-     * @var string
-     */
-    private string $executionHolder = 'jacked-server-execution';
 
     /**
      * @param string|null $host
@@ -81,10 +74,6 @@ class Server
             'path' => config('jacked-server.log.path', storage_path('logs/jacked-server.log')),
             'replace_placeholders' => config('jacked-server.log.replace-placeholders', 'single'),
         ]);
-
-        if (Storage::exists($this->executionHolder)) {
-            Storage::delete($this->executionHolder);
-        }
     }
 
     /**
@@ -210,15 +199,13 @@ class Server
     {
         $parsedData = json_decode($event->data);
 
-        if (!Storage::exists($this->executionHolder)) {
-            Storage::put($this->executionHolder, $event->server->getWorkerId());
-        }
-
         if (null === $parsedData) {
             return;
         }
 
-        $this->logger->info($this->logPrefix . ' Message received from ' . $parsedData->fd);
+        $this->logger->info($this->logPrefix . ' Message received from ' . $parsedData->fd, [
+            'event-data' => $event->data,
+        ]);
     }
 
     public function sslRedirectRequest(Request $request, Response $response): void
