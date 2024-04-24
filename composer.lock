@@ -2258,16 +2258,16 @@
         },
         {
             "name": "kanata-php/conveyor-laravel-broadcaster",
-            "version": "0.1.1",
+            "version": "0.1.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/kanata-php/conveyor-laravel-broadcaster.git",
-                "reference": "289f67d2c85ec1a80d10ddb94f54fc7acc0b282a"
+                "reference": "3b1de00ceb29e5c655c12cda1359031837dee7aa"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/kanata-php/conveyor-laravel-broadcaster/zipball/289f67d2c85ec1a80d10ddb94f54fc7acc0b282a",
-                "reference": "289f67d2c85ec1a80d10ddb94f54fc7acc0b282a",
+                "url": "https://api.github.com/repos/kanata-php/conveyor-laravel-broadcaster/zipball/3b1de00ceb29e5c655c12cda1359031837dee7aa",
+                "reference": "3b1de00ceb29e5c655c12cda1359031837dee7aa",
                 "shasum": ""
             },
             "require": {
@@ -2301,9 +2301,9 @@
             "description": "Conveyor Laravel Broadcaster",
             "support": {
                 "issues": "https://github.com/kanata-php/conveyor-laravel-broadcaster/issues",
-                "source": "https://github.com/kanata-php/conveyor-laravel-broadcaster/tree/0.1.1"
+                "source": "https://github.com/kanata-php/conveyor-laravel-broadcaster/tree/0.1.3"
             },
-            "time": "2024-04-24T03:37:15+00:00"
+            "time": "2024-04-24T07:12:16+00:00"
         },
         {
             "name": "kanata-php/conveyor-server-client",
