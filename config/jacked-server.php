@@ -68,7 +68,7 @@ return [
     // ------------------------------------------------------------
 
     'websocket' => [
-        'enabled' => env('JACKED_SERVER_WEBSOCKET_ENABLED', true),
+        'enabled' => env('JACKED_SERVER_WEBSOCKET_ENABLED', false),
         'broadcaster' => false,
     ],
 

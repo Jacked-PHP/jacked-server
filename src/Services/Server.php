@@ -96,14 +96,6 @@ class Server
         $host = $this->host ?? config('jacked-server.host', '0.0.0.0');
         $primaryPort = $ssl ? config('jacked-server.ssl-port', 443) : config('jacked-server.port', 8080);
 
-        if (false === config('jacked-server.websocket.enabled', true)) {
-            // TODO: craft HTTP only server
-            throw new Exception(
-                'WebSockets are not enabled! HTTP only servers are not ' .
-                'available yet by Jacked Server.',
-            );
-        }
-
         $this->wsPersistence = array_merge(
             Conveyor::defaultPersistence(),
             $this->wsPersistence,
@@ -138,6 +130,12 @@ class Server
 
     public function handleWsHandshake(Request $request, Response $response): bool
     {
+        if (false === config('jacked-server.websocket.enabled', true)) {
+            $response->status(401);
+            $response->end('WebSocket Not enabled!');
+            return false;
+        }
+
         $this->logger->info($this->logPrefix . ' Handshake received from ' . $request->fd);
 
         // evaluate intention to upgrade to websocket
