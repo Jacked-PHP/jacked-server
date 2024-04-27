@@ -35,6 +35,7 @@ return [
             env('JACKED_SERVER_STATIC_LOCATIONS', '/imgs,/css,/js,/build'),
         ),
     ],
+    'conveyor-options' => [],
 
     // ------------------------------------------------------------
     // Logging

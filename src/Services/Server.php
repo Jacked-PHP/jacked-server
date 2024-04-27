@@ -107,7 +107,9 @@ class Server
             mode: config('jacked-server.server-type', OpenSwooleBaseServer::POOL_MODE),
             ssl: $ssl ? Constant::SOCK_TCP | Constant::SSL : Constant::SOCK_TCP,
             serverOptions: $this->getServerConfig($ssl),
-            conveyorOptions: config('jacked-server.conveyor-options', []),
+            conveyorOptions: array_merge(config('jacked-server.conveyor-options', []), [
+                ConveyorConstants::USE_ACKNOWLEDGMENT => true, // required for broadcasting
+            ]),
             eventListeners: [
                 ConveyorConstants::EVENT_SERVER_STARTED => fn(ServerStartedEvent $event) =>
                     $this->handleStart($event->server),
