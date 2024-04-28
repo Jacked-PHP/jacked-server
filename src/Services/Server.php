@@ -7,6 +7,7 @@ use Conveyor\ConveyorServer;
 use Conveyor\Events\MessageReceivedEvent;
 use Conveyor\Events\PreServerStartEvent;
 use Conveyor\Events\ServerStartedEvent;
+use Conveyor\SubProtocols\Conveyor\Actions\BroadcastAction;
 use Conveyor\SubProtocols\Conveyor\Conveyor;
 use Conveyor\SubProtocols\Conveyor\Persistence\Interfaces\GenericPersistenceInterface;
 use Exception;
@@ -17,9 +18,11 @@ use Illuminate\Database\Capsule\Manager;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Broadcast;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use JackedPhp\JackedServer\Data\DirectMessage;
 use JackedPhp\JackedServer\Events\JackedRequestError;
 use JackedPhp\JackedServer\Events\JackedRequestFinished;
 use JackedPhp\JackedServer\Events\JackedServerStarted;
@@ -35,6 +38,7 @@ use OpenSwoole\Server as OpenSwooleBaseServer;
 use OpenSwoole\Util;
 use OpenSwoole\WebSocket\Server as OpenSwooleServer;
 use Psr\Log\LoggerInterface;
+use Conveyor\SubProtocols\Conveyor\Broadcast as ConveyorBroadcast;
 
 class Server
 {
@@ -112,7 +116,7 @@ class Server
             ]),
             eventListeners: [
                 ConveyorConstants::EVENT_SERVER_STARTED => fn(ServerStartedEvent $event) =>
-                    $this->handleStart($event->server),
+                $this->handleStart($event->server),
                 ConveyorConstants::EVENT_PRE_SERVER_START => function (PreServerStartEvent $event) use ($ssl) {
                     if ($ssl) {
                         $event->server->listen(
@@ -232,6 +236,8 @@ class Server
         }
 
         event(JackedServerStarted::class, $server->host, $server->port);
+
+        $this->startDirectMessageTick($server);
     }
 
     public function handleRequest(Request $request, Response $response): void
@@ -386,5 +392,26 @@ class Server
             'ssl_key_file' => config('jacked-server.ssl-key-file'),
             'open_http_protocol' => true,
         ] : []));
+    }
+
+    private function startDirectMessageTick(OpenSwooleServer $server): void
+    {
+        $server->tick(1000, function () use ($server) {
+            Cache::lock('conveyor-messages', 2)->block(6, function () use ($server) {
+                foreach (Cache::pull('conveyor-messages', []) as $message) {
+                    $data = DirectMessage::fromArray($message);
+                    ConveyorBroadcast::forceBroadcastToChannel(
+                        data: json_encode([
+                            'action' => BroadcastAction::NAME,
+                            'data' => $data->message,
+                        ]),
+                        channel: $data->channel,
+                        server: $server,
+                        channelPersistence: Arr::get($this->wsPersistence, 'channels'),
+                        ackPersistence: Arr::get($this->wsPersistence, 'messages-acknowledgments'),
+                    );
+                }
+            });
+        });
     }
 }
