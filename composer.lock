@@ -2263,16 +2263,16 @@
         },
         {
             "name": "kanata-php/conveyor-laravel-broadcaster",
-            "version": "0.1.7",
+            "version": "0.1.8",
             "source": {
                 "type": "git",
                 "url": "https://github.com/kanata-php/conveyor-laravel-broadcaster.git",
-                "reference": "54ed3e4993bd828f137cc478f3f61d7a3d9a8af0"
+                "reference": "72cfc0cf7351289bb300a28ad219b23628456dba"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/kanata-php/conveyor-laravel-broadcaster/zipball/54ed3e4993bd828f137cc478f3f61d7a3d9a8af0",
-                "reference": "54ed3e4993bd828f137cc478f3f61d7a3d9a8af0",
+                "url": "https://api.github.com/repos/kanata-php/conveyor-laravel-broadcaster/zipball/72cfc0cf7351289bb300a28ad219b23628456dba",
+                "reference": "72cfc0cf7351289bb300a28ad219b23628456dba",
                 "shasum": ""
             },
             "require": {
@@ -2306,9 +2306,9 @@
             "description": "Conveyor Laravel Broadcaster",
             "support": {
                 "issues": "https://github.com/kanata-php/conveyor-laravel-broadcaster/issues",
-                "source": "https://github.com/kanata-php/conveyor-laravel-broadcaster/tree/0.1.7"
+                "source": "https://github.com/kanata-php/conveyor-laravel-broadcaster/tree/0.1.8"
             },
-            "time": "2024-05-05T22:54:51+00:00"
+            "time": "2024-05-09T03:29:26+00:00"
         },
         {
             "name": "kanata-php/conveyor-server-client",
@@ -2360,16 +2360,16 @@
         },
         {
             "name": "kanata-php/socket-conveyor",
-            "version": "2.2.1",
+            "version": "2.2.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/kanata-php/socket-conveyor.git",
-                "reference": "3f70345f9dc4bbd4a8f871c2c0fcb327de1c3645"
+                "reference": "b3338718e356cb53613aa5c092b039b0ccbddee5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/kanata-php/socket-conveyor/zipball/3f70345f9dc4bbd4a8f871c2c0fcb327de1c3645",
-                "reference": "3f70345f9dc4bbd4a8f871c2c0fcb327de1c3645",
+                "url": "https://api.github.com/repos/kanata-php/socket-conveyor/zipball/b3338718e356cb53613aa5c092b039b0ccbddee5",
+                "reference": "b3338718e356cb53613aa5c092b039b0ccbddee5",
                 "shasum": ""
             },
             "require": {
@@ -2407,7 +2407,7 @@
             "description": "A WebSocket/Socket message Router",
             "support": {
                 "issues": "https://github.com/kanata-php/socket-conveyor/issues",
-                "source": "https://github.com/kanata-php/socket-conveyor/tree/2.2.1"
+                "source": "https://github.com/kanata-php/socket-conveyor/tree/2.2.2"
             },
             "funding": [
                 {
@@ -2415,7 +2415,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2024-05-05T23:56:31+00:00"
+            "time": "2024-05-09T03:26:13+00:00"
         },
         {
             "name": "kelunik/certificate",
