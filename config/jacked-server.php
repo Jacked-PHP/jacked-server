@@ -35,7 +35,10 @@ return [
             env('JACKED_SERVER_STATIC_LOCATIONS', '/imgs,/css,/js,/build'),
         ),
     ],
-    'conveyor-options' => [],
+    'conveyor-options' => [
+        'websocket-auth-token' => env('JACKED_SERVER_WEBSOCKET_AUTH_TOKEN'),
+        'websocket-auth-url' => env('JACKED_SERVER_WEBSOCKET_AUTH_URL'),
+    ],
 
     // ------------------------------------------------------------
     // Logging

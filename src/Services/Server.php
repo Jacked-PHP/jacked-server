@@ -2,13 +2,15 @@
 
 namespace JackedPhp\JackedServer\Services;
 
-use Conveyor\Constants as ConveyorConstants;
+use Conveyor\Constants;
 use Conveyor\ConveyorServer;
 use Conveyor\Events\MessageReceivedEvent;
 use Conveyor\Events\PreServerStartEvent;
 use Conveyor\Events\ServerStartedEvent;
+use Conveyor\Helpers\Http;
 use Conveyor\SubProtocols\Conveyor\Actions\BroadcastAction;
 use Conveyor\SubProtocols\Conveyor\Conveyor;
+use Conveyor\SubProtocols\Conveyor\Persistence\Interfaces\ChannelPersistenceInterface;
 use Conveyor\SubProtocols\Conveyor\Persistence\Interfaces\GenericPersistenceInterface;
 use Exception;
 use Hook\Filter;
@@ -105,6 +107,8 @@ class Server
             $this->wsPersistence,
         );
 
+        Filter::addFilter(Constants::EVENT_REQUEST_HANDLER, fn() => [$this, 'handleRequest']);
+
         ConveyorServer::start(
             host: $host,
             port: $this->port ?? $primaryPort,
@@ -112,12 +116,12 @@ class Server
             ssl: $ssl ? Constant::SOCK_TCP | Constant::SSL : Constant::SOCK_TCP,
             serverOptions: $this->getServerConfig($ssl),
             conveyorOptions: array_merge(config('jacked-server.conveyor-options', []), [
-                ConveyorConstants::USE_ACKNOWLEDGMENT => true, // required for broadcasting
+                Constants::USE_ACKNOWLEDGMENT => true, // required for broadcasting
             ]),
             eventListeners: [
-                ConveyorConstants::EVENT_SERVER_STARTED => fn(ServerStartedEvent $event) =>
+                Constants::EVENT_SERVER_STARTED => fn(ServerStartedEvent $event) =>
                 $this->handleStart($event->server),
-                ConveyorConstants::EVENT_PRE_SERVER_START => function (PreServerStartEvent $event) use ($ssl) {
+                Constants::EVENT_PRE_SERVER_START => function (PreServerStartEvent $event) use ($ssl) {
                     if ($ssl) {
                         $event->server->listen(
                             $event->server->host,
@@ -125,10 +129,10 @@ class Server
                             Constant::SOCK_TCP,
                         )->on('request', [$this, 'sslRedirectRequest']);
                     }
-                    $event->server->on('request', [$this, 'handleRequest']);
+                    // $event->server->on('request', [$this, 'handleRequest']);
                     $event->server->on('handshake', [$this, 'handleWsHandshake']);
                 },
-                ConveyorConstants::EVENT_MESSAGE_RECEIVED => [$this, 'handleWsMessage'],
+                Constants::EVENT_MESSAGE_RECEIVED => [$this, 'handleWsMessage'],
             ],
             persistence: $this->wsPersistence,
         );
