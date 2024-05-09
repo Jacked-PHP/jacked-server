@@ -107,7 +107,7 @@ class Server
             $this->wsPersistence,
         );
 
-        Filter::addFilter(Constants::EVENT_REQUEST_HANDLER, fn() => [$this, 'handleRequest']);
+        Filter::addFilter(Constants::FILTER_REQUEST_HANDLER, fn() => [$this, 'handleRequest']);
 
         ConveyorServer::start(
             host: $host,
@@ -129,7 +129,6 @@ class Server
                             Constant::SOCK_TCP,
                         )->on('request', [$this, 'sslRedirectRequest']);
                     }
-                    // $event->server->on('request', [$this, 'handleRequest']);
                     $event->server->on('handshake', [$this, 'handleWsHandshake']);
                 },
                 Constants::EVENT_MESSAGE_RECEIVED => [$this, 'handleWsMessage'],
