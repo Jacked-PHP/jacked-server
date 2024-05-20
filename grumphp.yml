@@ -1,7 +1,7 @@
 grumphp:
     fixer:
-        enabled: false
-        fix_by_default: false
+        enabled: true
+        fix_by_default: true
     tasks:
         phpcs:
             standard:

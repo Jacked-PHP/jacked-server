@@ -16,6 +16,7 @@ use Orchestra\Testbench\TestCase;
 use Tests\Feature\Traits\ServerTrait;
 use WebSocket\Client;
 use WebSocket\ConnectionException;
+
 use function Orchestra\Testbench\artisan;
 
 class WebSocketServerTest extends TestCase

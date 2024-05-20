@@ -22,9 +22,8 @@ class Response
     public function __construct(
         private readonly string $output,
         private readonly string $error,
-        private readonly float  $duration,
-    )
-    {
+        private readonly float $duration,
+    ) {
         $this->parseHeadersAndBody();
     }
 

@@ -120,7 +120,7 @@ class FastCgiClient
      */
     public function setKeepAlive($b)
     {
-        $this->_keepAlive = (boolean)$b;
+        $this->_keepAlive = (bool)$b;
         if (!$this->_keepAlive && $this->_sock) {
             fclose($this->_sock);
         }
@@ -145,7 +145,7 @@ class FastCgiClient
     public function setPersistentSocket($b)
     {
         $was_persistent = ($this->_sock && $this->_persistentSocket);
-        $this->_persistentSocket = (boolean)$b;
+        $this->_persistentSocket = (bool)$b;
         if (!$this->_persistentSocket && $was_persistent) {
             fclose($this->_sock);
         }
@@ -209,7 +209,8 @@ class FastCgiClient
      * @param Integer millisecond timeout
      * @return Boolean
      */
-    private function set_ms_timeout($timeoutMs) {
+    private function set_ms_timeout($timeoutMs)
+    {
         if (!$this->_sock) {
             return false;
         }
@@ -224,9 +225,9 @@ class FastCgiClient
     {
         if (!$this->_sock) {
             if ($this->_persistentSocket) {
-                $this->_sock = pfsockopen($this->_host, $this->_port, $errno, $errstr, $this->_connectTimeout/1000);
+                $this->_sock = pfsockopen($this->_host, $this->_port, $errno, $errstr, $this->_connectTimeout / 1000);
             } else {
-                $this->_sock = fsockopen($this->_host, $this->_port, $errno, $errstr, $this->_connectTimeout/1000);
+                $this->_sock = fsockopen($this->_host, $this->_port, $errno, $errstr, $this->_connectTimeout / 1000);
             }
 
             if (!$this->_sock) {
@@ -306,7 +307,6 @@ class FastCgiClient
         $p = 0;
 
         while ($p != $length) {
-
             $nlen = ord($data[$p++]);
             if ($nlen >= 128) {
                 $nlen = ($nlen & 0x7F << 24);
@@ -321,7 +321,7 @@ class FastCgiClient
                 $vlen |= (ord($data[$p++]) << 8);
                 $vlen |= (ord($data[$p++]));
             }
-            $array[substr($data, $p, $nlen)] = substr($data, $p+$nlen, $vlen);
+            $array[substr($data, $p, $nlen)] = substr($data, $p + $nlen, $vlen);
             $p += ($nlen + $vlen);
         }
 
@@ -358,7 +358,7 @@ class FastCgiClient
             $resp['content'] = '';
             if ($resp['contentLength']) {
                 $len  = $resp['contentLength'];
-                while ($len && ($buf=fread($this->_sock, $len)) !== false) {
+                while ($len && ($buf = fread($this->_sock, $len)) !== false) {
                     $len -= strlen($buf);
                     $resp['content'] .= $buf;
                 }
@@ -434,9 +434,10 @@ class FastCgiClient
         // Using persistent sockets implies you want them keept alive by server!
         $keepAlive = intval($this->_keepAlive || $this->_persistentSocket);
 
-        $request = $this->buildPacket(self::BEGIN_REQUEST
-            ,chr(0) . chr(self::RESPONDER) . chr($keepAlive) . str_repeat(chr(0), 5)
-            ,$id
+        $request = $this->buildPacket(
+            self::BEGIN_REQUEST,
+            chr(0) . chr(self::RESPONDER) . chr($keepAlive) . str_repeat(chr(0), 5),
+            $id
         );
 
         $paramsRequest = '';
@@ -459,7 +460,6 @@ class FastCgiClient
         $request .= $this->buildPacket(self::STDIN, '', $id);
 
         if (fwrite($this->_sock, $request) === false || fflush($this->_sock) === false) {
-
             $info = stream_get_meta_data($this->_sock);
 
             if ($info['timed_out']) {
@@ -486,14 +486,16 @@ class FastCgiClient
      * @param Integer $timeoutMs [optional] the number of milliseconds to wait. Defaults to the ReadWriteTimeout value set.
      * @return string  response body
      */
-    public function wait_for_response($requestId, $timeoutMs = 0) {
+    public function wait_for_response($requestId, $timeoutMs = 0)
+    {
 
         if (!isset($this->_requests[$requestId])) {
             throw new \Exception('Invalid request id given');
         }
 
         // If we already read the response during an earlier call for different id, just return it
-        if ($this->_requests[$requestId]['state'] == self::REQ_STATE_OK
+        if (
+            $this->_requests[$requestId]['state'] == self::REQ_STATE_OK
             || $this->_requests[$requestId]['state'] == self::REQ_STATE_ERR
         ) {
             return $this->_requests[$requestId]['response'];
@@ -540,9 +542,11 @@ class FastCgiClient
                 throw new TimedOutException('Read timed out');
             }
 
-            if ($info['unread_bytes'] == 0
+            if (
+                $info['unread_bytes'] == 0
                 && $info['blocked']
-                && $info['eof']) {
+                && $info['eof']
+            ) {
                 throw new ForbiddenException('Not in white list. Check listen.allowed_clients.');
             }
 

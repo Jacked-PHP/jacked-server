@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Process;
 use JackedPhp\JackedServer\Services\Server;
 use Mustachio\Service as Stache;
 use OpenSwoole\Process as OpenSwooleProcess;
+
 use function Orchestra\Testbench\artisan;
 
 trait ServerTrait
@@ -64,7 +65,7 @@ trait ServerTrait
             return $this->manager;
         }
 
-        $this->manager = new Manager;
+        $this->manager = new Manager();
         $this->manager->addConnection($databaseOptions, 'socket-conveyor');
 
         return $this->manager;
@@ -104,7 +105,7 @@ trait ServerTrait
         }
 
         $httpServer = new OpenSwooleProcess(
-            function(OpenSwooleProcess $worker) {
+            function (OpenSwooleProcess $worker) {
                 (new Server(
                     port: $this->port,
                 ))->run();
@@ -115,7 +116,7 @@ trait ServerTrait
 
         $counter = 0;
         $threshold = 10; // seconds
-        while(
+        while (
             empty($this->get_server_processes())
             && $counter < $threshold
         ) {
@@ -257,12 +258,15 @@ trait ServerTrait
         copy($newPHPUnitXml, $phpUnitXml);
     }
 
-    private function recursiveChmod($path, $dirPermission, $filePermission) {
+    private function recursiveChmod($path, $dirPermission, $filePermission)
+    {
         if (is_dir($path)) {
             chmod($path, $dirPermission);
             $dir = new DirectoryIterator($path);
             foreach ($dir as $item) {
-                if ($item->isDot()) continue;
+                if ($item->isDot()) {
+                    continue;
+                }
                 $this->recursiveChmod($item->getPathname(), $dirPermission, $filePermission);
             }
         } else {

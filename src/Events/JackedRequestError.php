@@ -12,5 +12,6 @@ class JackedRequestError
         public readonly int $status,
         public readonly array $headers,
         public readonly string $error,
-    ) {}
+    ) {
+    }
 }

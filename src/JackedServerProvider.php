@@ -9,13 +9,13 @@ class JackedServerProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->mergeConfigFrom(__DIR__.'/../config/jacked-server.php', 'jacked-server');
+        $this->mergeConfigFrom(__DIR__ . '/../config/jacked-server.php', 'jacked-server');
     }
 
     public function boot(): void
     {
         $this->publishes([
-            __DIR__.'/../config/jacked-server.php' => config_path('jacked-server.php'),
+            __DIR__ . '/../config/jacked-server.php' => config_path('jacked-server.php'),
         ], 'jacked-server');
 
         if ($this->app->runningInConsole()) {

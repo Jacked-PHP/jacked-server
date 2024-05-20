@@ -47,6 +47,6 @@ Route::middleware('auth:sanctum')->get('/broadcast-sample', function () {
         useLimit: 1,
     )->token);
 
-    broadcast(new BroadcastSampleEvent);
+    broadcast(new BroadcastSampleEvent());
     return response('dispatched', 200);
 });

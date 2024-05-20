@@ -9,7 +9,8 @@ class BroadcastSampleEvent implements ShouldBroadcast
 {
     public function __construct(
         public string $message = 'text-message',
-    ) {}
+    ) {
+    }
 
     /**
      * Get the channels the event should broadcast on.

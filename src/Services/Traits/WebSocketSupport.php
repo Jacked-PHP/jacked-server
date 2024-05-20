@@ -33,7 +33,7 @@ trait WebSocketSupport
             'Sec-WebSocket-Version' => '13',
         ];
 
-        if(isset($request->header['sec-websocket-protocol'])) {
+        if (isset($request->header['sec-websocket-protocol'])) {
             $headers['Sec-WebSocket-Protocol'] = $request->header['sec-websocket-protocol'];
         }
 
