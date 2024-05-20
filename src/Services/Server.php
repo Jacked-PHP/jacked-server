@@ -322,13 +322,15 @@ class Server
             return;
         }
 
-        /** @var JackedResponse $jackedResponse */
-        $jackedResponse = $this->executeRequest($requestOptions, $content);
+        /** @var ?JackedResponse $jackedResponse */
+        $jackedResponse = $this->executeRequest($requestOptions, $content, $response);
 
-        $this->sendResponse($response, $jackedResponse);
+        if (null !== $jackedResponse) {
+            $this->sendResponse($response, $jackedResponse);
+        }
     }
 
-    private function sendResponse(Response $response, JackedResponse $jackedResponse): void
+    private function sendResponse(Response $response, JackedResponse $jackedResponse, callable $streamCallback = null): void
     {
         if (!empty($jackedResponse->getError())) {
             event(
@@ -339,6 +341,7 @@ class Server
             );
             $response->status(500);
             $response->write($jackedResponse->getError());
+            $response->end();
             return;
         }
 
@@ -372,6 +375,9 @@ class Server
         // content
         if (in_array($status[0], [301, 302, 303, 307])) {
             $response->redirect($headers['Location'][0]);
+        } elseif ($streamCallback !== null) {
+            $streamCallback($response);
+            $response->end();
         } elseif (!empty($body)) {
             $response->write($body);
         } else {

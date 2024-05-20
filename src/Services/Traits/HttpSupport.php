@@ -9,6 +9,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use JackedPhp\JackedServer\Events\JackedRequestReceived;
 use JackedPhp\JackedServer\Exceptions\RedirectException;
+use JackedPhp\JackedServer\Services\FastCgiClient;
 use JackedPhp\JackedServer\Services\Response as JackedResponse;
 use OpenSwoole\Http\Request;
 use Illuminate\Console\OutputStyle;
@@ -140,7 +141,7 @@ trait HttpSupport
         $response->end($body);
     }
 
-    protected function executeRequest(array $requestOptions, string $content): JackedResponse
+    protected function executeRequest(array $requestOptions, string $content, Response $response): JackedResponse|null
     {
         $result = '';
         $error = '';
@@ -157,7 +158,7 @@ trait HttpSupport
             $this->logger->info($this->logPrefix . 'Request Time: {time}', [
                 'time' => Carbon::now()->format('Y-m-d H:i:s'),
             ]);
-            $client = new Client(
+            $client = new FastCgiClient(
                 host: config('jacked-server.fastcgi.host', '127.0.0.1'),
                 port: config('jacked-server.fastcgi.port', 9000),
             );
@@ -167,7 +168,10 @@ trait HttpSupport
             $client->setReadWriteTimeout(
                 config('jacked-server.readwrite-timeout', 60) * 1000,
             );
-            $result = ($client)->request($requestOptions, $content);
+
+            $result = $client->requestStream($requestOptions, $content, function ($data) use ($response) {
+                $response->write($data);
+            });
         } catch (Exception $e) {
             $error = $e->getMessage();
 
@@ -192,6 +196,10 @@ trait HttpSupport
         $this->logger->info($this->logPrefix . 'Request Memory used: {memoryUsed}', [
             'memoryUsed' => number_format($memoryUsed) . ' bytes',
         ]);
+
+        if ($result === null) {
+            return null;
+        }
 
         if ($this->isValidFastcgiResponse($result)) {
             $error = $result;
