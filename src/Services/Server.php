@@ -239,8 +239,6 @@ class Server
         }
 
         event(JackedServerStarted::class, $server->host, $server->port);
-
-        $this->startDirectMessageTick($server);
     }
 
     public function handleRequest(Request $request, Response $response): void
@@ -401,26 +399,5 @@ class Server
             'ssl_key_file' => config('jacked-server.ssl-key-file'),
             'open_http_protocol' => true,
         ] : []));
-    }
-
-    private function startDirectMessageTick(OpenSwooleServer $server): void
-    {
-        $server->tick(1000, function () use ($server) {
-            Cache::lock('conveyor-messages', 2)->block(6, function () use ($server) {
-                foreach (Cache::pull('conveyor-messages', []) as $message) {
-                    $data = DirectMessage::fromArray($message);
-                    ConveyorBroadcast::forceBroadcastToChannel(
-                        data: json_encode([
-                            'action' => BroadcastAction::NAME,
-                            'data' => $data->message,
-                        ]),
-                        channel: $data->channel,
-                        server: $server,
-                        channelPersistence: Arr::get($this->wsPersistence, 'channels'),
-                        ackPersistence: Arr::get($this->wsPersistence, 'messages-acknowledgments'),
-                    );
-                }
-            });
-        });
     }
 }
