@@ -2,19 +2,19 @@
 
 namespace JackedPhp\JackedServer\Services\Traits;
 
-use Adoy\FastCGI\Client;
+use Carbon\Carbon;
+use Conveyor\Helpers\Arr;
 use Exception;
 use Hook\Filter;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Carbon;
 use JackedPhp\JackedServer\Events\JackedRequestReceived;
 use JackedPhp\JackedServer\Exceptions\RedirectException;
+use JackedPhp\JackedServer\Helpers\Config;
 use JackedPhp\JackedServer\Services\FastCgiClient;
 use JackedPhp\JackedServer\Services\Response as JackedResponse;
 use OpenSwoole\Http\Request;
-use Illuminate\Console\OutputStyle;
 use OpenSwoole\Coroutine\Http\Client as CoroutineHttpClient;
 use OpenSwoole\Http\Response;
+use Symfony\Component\Console\Style\OutputStyle;
 
 trait HttpSupport
 {
@@ -68,7 +68,10 @@ trait HttpSupport
         /** @throws RedirectException */
         $this->checkPathTrailingSlash($requestOptions);
 
-        event(JackedRequestReceived::class, $requestOptions, $content);
+        $this->eventDispatcher->dispatch(new JackedRequestReceived(
+            requestOptions: $requestOptions,
+            content: $content,
+        ));
 
         return [ $requestOptions, $content ];
     }
@@ -121,7 +124,7 @@ trait HttpSupport
             'Host' => $host,
             'User-Agent' => 'Jacked Server HTTP Proxy',
         ]);
-        $client->set([ 'timeout' => config(
+        $client->set([ 'timeout' => Config::get(
             key: 'jacked-server.proxy.timeout',
             default: 5,
         )]);
@@ -159,15 +162,11 @@ trait HttpSupport
                 'time' => Carbon::now()->format('Y-m-d H:i:s'),
             ]);
             $client = new FastCgiClient(
-                host: config('jacked-server.fastcgi.host', '127.0.0.1'),
-                port: config('jacked-server.fastcgi.port', 9000),
+                host: Config::get('fastcgi.host', '127.0.0.1'),
+                port: Config::get('fastcgi.port', 9000),
             );
-            $client->setConnectTimeout(
-                config('jacked-server.timeout', 60) * 1000,
-            );
-            $client->setReadWriteTimeout(
-                config('jacked-server.readwrite-timeout', 60) * 1000,
-            );
+            $client->setConnectTimeout(Config::get('timeout', 60) * 1000);
+            $client->setReadWriteTimeout(Config::get('readwrite-timeout', 60) * 1000);
 
             $result = $client->requestStream($requestOptions, $content, function ($data) use ($response) {
                 $response->write($data);
@@ -249,7 +248,7 @@ trait HttpSupport
             'server_protocol' => Arr::get(
                 $serverInfo,
                 'server_protocol',
-                config('jacked-server.server-protocol', 'HTTP/1.1'),
+                Config::get('server-protocol', 'HTTP/1.1'),
             ),
             'server_name' => Arr::get($requestOptions, 'http_host'),
         ])), CASE_UPPER);
@@ -297,9 +296,9 @@ trait HttpSupport
          */
         $documentRoot = $this->documentRoot ?? Filter::applyFilters(
             'jacked_document_root',
-            config(
-                'jacked-server.openswoole-server-settings.document_root',
-                public_path(),
+            Config::get(
+                'openswoole-server-settings.document_root',
+                __DIR__ . '/public',
             ),
             $requestUri,
         );

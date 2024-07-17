@@ -1,24 +1,27 @@
 <?php
 
+use Monolog\Level;
+use OpenSwoole\Util;
+
 return [
     // ------------------------------------------------------------
     // Running server details
     // ------------------------------------------------------------
 
-    'host' => env('JACKED_SERVER_HOST', '0.0.0.0'),
-    'port' => env('JACKED_SERVER_PORT', 8080),
-    'server-type' => env('JACKED_SERVER_SERVER_TYPE', 2),
-    'timeout' => env('JACKED_SERVER_TIMEOUT', 60),
-    'readwrite-timeout' => env('JACKED_SERVER_READWRITE_TIMEOUT', 60),
+    'host' => $_ENV['JACKED_SERVER_HOST'] ?? '0.0.0.0',
+    'port' => $_ENV['JACKED_SERVER_PORT'] ?? 8080,
+    'server-type' => $_ENV['JACKED_SERVER_SERVER_TYPE'] ?? 2,
+    'timeout' => $_ENV['JACKED_SERVER_TIMEOUT'] ?? 60,
+    'readwrite-timeout' => $_ENV['JACKED_SERVER_READWRITE_TIMEOUT'] ?? 60,
 
     // ------------------------------------------------------------
     // SSL
     // ------------------------------------------------------------
 
-    'ssl-port' => env('JACKED_SERVER_SSL_PORT', 443),
-    'ssl-enabled' => env('JACKED_SERVER_SSL_ENABLED', false),
-    'ssl-cert-file' => env('JACKED_SERVER_SSL_CERT_FILE'),
-    'ssl-key-file' => env('JACKED_SERVER_SSL_KEY_FILE'),
+    'ssl-port' => $_ENV['JACKED_SERVER_SSL_PORT'] ?? 443,
+    'ssl-enabled' => $_ENV['JACKED_SERVER_SSL_ENABLED'] ?? false,
+    'ssl-cert-file' => $_ENV['JACKED_SERVER_SSL_CERT_FILE'] ?? null,
+    'ssl-key-file' => $_ENV['JACKED_SERVER_SSL_KEY_FILE'] ?? null,
 
     // ------------------------------------------------------------
     // Running server default options
@@ -26,18 +29,20 @@ return [
 
     'server-protocol' => 'HTTP/1.1',
     'content-type' => 'text/html',
-    'input-file' => env('JACKED_SERVER_INPUT_FILE', public_path('index.php')),
+    'reactor-num' => $_ENV['JACKED_SERVER_REACTOR_NUM'] ?? Util::getCPUNum() + 2,
+    'worker-num' => $_ENV['JACKED_SERVER_WORKER_NUM'] ?? Util::getCPUNum() + 2,
+    'input-file' => $_ENV['JACKED_SERVER_INPUT_FILE'] ?? ROOT_DIR . '/index.php',
     'openswoole-server-settings' => [
-        'document_root' => env('JACKED_SERVER_DOCUMENT_ROOT', public_path()),
-        'enable_static_handler' => env('JACKED_SERVER_STATIC_ENABLED', true),
+        'document_root' => $_ENV['JACKED_SERVER_DOCUMENT_ROOT'] ?? ROOT_DIR,
+        'enable_static_handler' => $_ENV['JACKED_SERVER_STATIC_ENABLED'] ?? true,
         'static_handler_locations' => explode(
             ',',
-            env('JACKED_SERVER_STATIC_LOCATIONS', '/imgs,/css,/js,/build'),
+            $_ENV['JACKED_SERVER_STATIC_LOCATIONS'] ?? '/imgs,/css,/js,/build',
         ),
     ],
     'conveyor-options' => [
-        'websocket-auth-token' => env('JACKED_SERVER_WEBSOCKET_AUTH_TOKEN'),
-        'websocket-auth-url' => env('JACKED_SERVER_WEBSOCKET_AUTH_URL'),
+        'websocket-auth-token' => $_ENV['JACKED_SERVER_WEBSOCKET_AUTH_TOKEN'] ?? null,
+        'websocket-auth-url' => $_ENV['JACKED_SERVER_WEBSOCKET_AUTH_URL'] ?? null,
     ],
 
     // ------------------------------------------------------------
@@ -45,9 +50,8 @@ return [
     // ------------------------------------------------------------
 
     'log' => [
-        'driver' => env('JACKED_SERVER_LOG_DRIVER', 'single'),
-        'path' => storage_path(env('JACKED_SERVER_LOG_PATH', 'logs/jacked-server.log')),
-        'replace-placeholders' => true,
+        'stream' => $_ENV['JACKED_SERVER_LOG_PATH'] ?? ROOT_DIR . '/logs/jacked-server.log',
+        'level' => $_ENV['JACKED_SERVER_LOG_LEVEL'] ?? Level::Warning,
     ],
 
     // ------------------------------------------------------------
@@ -63,8 +67,8 @@ return [
     // ------------------------------------------------------------
 
     'fastcgi' => [
-        'host' => env('JACKED_SERVER_FASTCGI_HOST', '127.0.0.1'),
-        'port' => env('JACKED_SERVER_FASTCGI_PORT', 9000),
+        'host' => $_ENV['JACKED_SERVER_FASTCGI_HOST'] ?? '127.0.0.1',
+        'port' => $_ENV['JACKED_SERVER_FASTCGI_PORT'] ?? 9000,
     ],
 
     // ------------------------------------------------------------
@@ -72,7 +76,7 @@ return [
     // ------------------------------------------------------------
 
     'websocket' => [
-        'enabled' => env('JACKED_SERVER_WEBSOCKET_ENABLED', false),
+        'enabled' => $_ENV['JACKED_SERVER_WEBSOCKET_ENABLED'] ?? false,
         'broadcaster' => false,
     ],
 
@@ -81,12 +85,12 @@ return [
     // ------------------------------------------------------------
 
     'proxy' => [
-        'enabled' => env('JACKED_SERVER_PROXY_ENABLED', false),
-        'host' => env('JACKED_SERVER_PROXY_HOST', '127.0.0.1'),
-        'port' => env('JACKED_SERVER_PROXY_PORT', 3000),
+        'enabled' => $_ENV['JACKED_SERVER_PROXY_ENABLED'] ?? false,
+        'host' => $_ENV['JACKED_SERVER_PROXY_HOST'] ?? '127.0.0.1',
+        'port' => $_ENV['JACKED_SERVER_PROXY_PORT'] ?? 3000,
         'allowed-headers' => [
             'content-type',
         ],
-        'timeout' => env('JACKED_SERVER_PROXY_TIMEOUT', 5),
+        'timeout' => $_ENV['JACKED_SERVER_PROXY_TIMEOUT'] ?? 5,
     ],
 ];

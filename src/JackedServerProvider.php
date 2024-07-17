@@ -3,7 +3,7 @@
 namespace JackedPhp\JackedServer;
 
 use Illuminate\Support\ServiceProvider;
-use JackedPhp\JackedServer\Commands\OpenSwooleServer;
+use JackedPhp\JackedServer\Commands\RunCommand;
 
 class JackedServerProvider extends ServiceProvider
 {
@@ -20,7 +20,7 @@ class JackedServerProvider extends ServiceProvider
 
         if ($this->app->runningInConsole()) {
             $this->commands([
-                OpenSwooleServer::class,
+                RunCommand::class,
             ]);
         }
     }

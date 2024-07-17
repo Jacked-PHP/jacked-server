@@ -2,45 +2,41 @@
 
 namespace JackedPhp\JackedServer\Services;
 
+use Carbon\Carbon;
 use Conveyor\Constants;
 use Conveyor\ConveyorServer;
 use Conveyor\Events\MessageReceivedEvent;
 use Conveyor\Events\PreServerStartEvent;
 use Conveyor\Events\ServerStartedEvent;
-use Conveyor\Helpers\Http;
-use Conveyor\SubProtocols\Conveyor\Actions\BroadcastAction;
+use Conveyor\Helpers\Arr;
+use Conveyor\SubProtocols\Conveyor\Broadcast;
 use Conveyor\SubProtocols\Conveyor\Conveyor;
-use Conveyor\SubProtocols\Conveyor\Persistence\Interfaces\ChannelPersistenceInterface;
 use Conveyor\SubProtocols\Conveyor\Persistence\Interfaces\GenericPersistenceInterface;
 use Exception;
 use Hook\Filter;
 use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Console\OutputStyle;
-use Illuminate\Database\Capsule\Manager;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Broadcast;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
-use JackedPhp\JackedServer\Data\DirectMessage;
 use JackedPhp\JackedServer\Events\JackedRequestError;
 use JackedPhp\JackedServer\Events\JackedRequestFinished;
 use JackedPhp\JackedServer\Events\JackedServerStarted;
 use JackedPhp\JackedServer\Exceptions\RedirectException;
+use JackedPhp\JackedServer\Helpers\Config;
+use JackedPhp\JackedServer\Services\Logger\EchoHandler;
 use JackedPhp\JackedServer\Services\Response as JackedResponse;
 use JackedPhp\JackedServer\Services\Traits\HttpSupport;
 use JackedPhp\JackedServer\Services\Traits\WebSocketSupport;
-use Kanata\LaravelBroadcaster\Models\Token;
+use Monolog\Handler\StreamHandler;
+use Monolog\Level;
+use Monolog\Logger;
 use OpenSwoole\Constant;
 use OpenSwoole\Http\Request;
 use OpenSwoole\Http\Response;
 use OpenSwoole\Server as OpenSwooleBaseServer;
-use OpenSwoole\Util;
 use OpenSwoole\WebSocket\Server as OpenSwooleServer;
 use Psr\Log\LoggerInterface;
-use Conveyor\SubProtocols\Conveyor\Broadcast as ConveyorBroadcast;
+use Symfony\Component\Console\Style\OutputStyle;
+use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\EventDispatcher\EventDispatcher;
+use Throwable;
 
 class Server
 {
@@ -57,9 +53,11 @@ class Server
      * @param string|null $inputFile
      * @param string|null $documentRoot
      * @param string|null $publicDocumentRoot
-     * @param OutputStyle|null $output
+     * @param SymfonyStyle|null $output
      * @param array<GenericPersistenceInterface> $wsPersistence
-     * @param Manager|null $manager
+     * @param EventDispatcher $eventDispatcher
+     * @param string $logPath
+     * @param int $logLevel
      */
     public function __construct(
         private readonly ?string $host = null,
@@ -67,19 +65,30 @@ class Server
         ?string $inputFile = null,
         private readonly ?string $documentRoot = null,
         private readonly ?string $publicDocumentRoot = null,
-        private readonly ?OutputStyle $output = null,
+        private readonly ?SymfonyStyle $output = null,
         private array $wsPersistence = [],
-        private ?Manager $manager = null,
+        private ?EventDispatcher $eventDispatcher = null,
+        string $logPath = null,
+        int $logLevel = null,
     ) {
-        $this->inputFile = $inputFile ?? config(
-            'jacked-server.input-file',
-            public_path('index.php'),
+        $this->inputFile = $inputFile ?? Config::get(
+            'input-file',
+            ROOT_DIR . '/index.php',
         );
-        $this->logger = Log::build([
-            'driver' => config('jacked-server.log.driver-name', 'single'),
-            'path' => config('jacked-server.log.path', storage_path('logs/jacked-server.log')),
-            'replace_placeholders' => config('jacked-server.log.replace-placeholders', 'single'),
-        ]);
+
+        $this->logger = new Logger(name: 'jacked-server-log');
+        if ($logPath !== null) {
+            $this->logger->pushHandler(new StreamHandler(
+                stream: $logPath ?? Config::get('log.stream', ROOT_DIR . '/jacked-server.log'),
+                level: $logLevel ?? Config::get('log.level', Level::Warning),
+            ));
+        } else {
+            $this->logger->pushHandler(new EchoHandler(
+                level: $logLevel ?? Config::get('log.level', Level::Warning)
+            ));
+        }
+
+        $this->eventDispatcher = $eventDispatcher ?? new EventDispatcher;
     }
 
     /**
@@ -87,7 +96,7 @@ class Server
      */
     public function run(): void
     {
-        $ssl = config('jacked-server.ssl-enabled', false);
+        $ssl = Config::get('ssl-enabled', false);
         if (null !== $this->port && $ssl) {
             $this->logger->warning(
                 'SSL is enabled, but a port was specified. ' .
@@ -99,8 +108,8 @@ class Server
             );
             $this->port = null;
         }
-        $host = $this->host ?? config('jacked-server.host', '0.0.0.0');
-        $primaryPort = $ssl ? config('jacked-server.ssl-port', 443) : config('jacked-server.port', 8080);
+        $host = $this->host ?? Config::get('host', '0.0.0.0');
+        $primaryPort = $ssl ? Config::get('ssl-port', 443) : Config::get('port', 8080);
 
         $this->wsPersistence = array_merge(
             Conveyor::defaultPersistence(),
@@ -112,10 +121,10 @@ class Server
         ConveyorServer::start(
             host: $host,
             port: $this->port ?? $primaryPort,
-            mode: config('jacked-server.server-type', OpenSwooleBaseServer::POOL_MODE),
+            mode: Config::get('server-type', OpenSwooleBaseServer::POOL_MODE),
             ssl: $ssl ? Constant::SOCK_TCP | Constant::SSL : Constant::SOCK_TCP,
             serverOptions: $this->getServerConfig($ssl),
-            conveyorOptions: array_merge(config('jacked-server.conveyor-options', []), [
+            conveyorOptions: array_merge(Config::get('conveyor-options', []), [
                 Constants::USE_ACKNOWLEDGMENT => true, // required for broadcasting
             ]),
             eventListeners: [
@@ -125,7 +134,7 @@ class Server
                     if ($ssl) {
                         $event->server->listen(
                             $event->server->host,
-                            config('jacked-server.port', 8080),
+                            Config::get('port', 8080),
                             Constant::SOCK_TCP,
                         )->on('request', [$this, 'sslRedirectRequest']);
                     }
@@ -139,7 +148,7 @@ class Server
 
     public function handleWsHandshake(Request $request, Response $response): bool
     {
-        if (false === config('jacked-server.websocket.enabled')) {
+        if (Config::get('websocket.enabled', false) !== true) {
             $response->status(401);
             $response->end('WebSocket Not enabled!');
             return false;
@@ -158,11 +167,13 @@ class Server
 
         // check for authorization
         try {
-            $broadcaster = rescue(
-                callback: fn() => Broadcast::driver('conveyor'),
-                report: false,
-            );
-            $wsAuth = config('jacked-server.websocket.broadcaster');
+            // TODO: adjust this to reach out to laravel
+            try {
+                $broadcaster = Broadcast::driver('conveyor');
+            } catch (Exception $e) {
+                // silence...
+            }
+            $wsAuth = Config::get('websocket.broadcaster');
 
             parse_str(Arr::get($request->server, 'query_string') ?? '', $query);
             $token = Arr::get($query, 'token');
@@ -238,7 +249,10 @@ class Server
             echo $message . PHP_EOL;
         }
 
-        event(JackedServerStarted::class, $server->host, $server->port);
+        $this->eventDispatcher->dispatch(new JackedServerStarted(
+            host: $server->host,
+            port: $server->port,
+        ));
     }
 
     public function handleRequest(Request $request, Response $response): void
@@ -253,7 +267,7 @@ class Server
          */
         $proxyRequest = Filter::applyFilters(
             'jacked_proxy_request',
-            config('jacked-server.proxy.enabled', false),
+            Config::get('proxy.enabled', false),
             $request,
         );
 
@@ -268,7 +282,7 @@ class Server
              */
             $proxyHost = Filter::applyFilters(
                 'jacked_proxy_host',
-                config('jacked-server.proxy.host', '127.0.0.1'),
+                Config::get('proxy.host', '127.0.0.1'),
                 $request,
             );
 
@@ -282,7 +296,7 @@ class Server
              */
             $proxyPort = Filter::applyFilters(
                 'jacked_proxy_port',
-                config('jacked-server.proxy.port', 3000),
+                Config::get('proxy.port', 3000),
                 $request,
             );
 
@@ -296,7 +310,7 @@ class Server
              */
             $proxyAllowedHeaders = Filter::applyFilters(
                 'jacked_proxy_allowed_headers',
-                config('jacked-server.proxy.allowed-headers', [
+                Config::get('proxy.allowed-headers', [
                     'content-type',
                 ]),
                 $request,
@@ -311,6 +325,12 @@ class Server
             );
             return;
         }
+
+        $this->output->writeln(
+            'Request received: '
+            . $request->server['request_method'] . ' '
+            . $request->server['request_uri']
+        );
 
         try {
             [ $requestOptions, $content ] = $this->gatherRequestInfo($request);
@@ -331,12 +351,11 @@ class Server
     private function sendResponse(Response $response, JackedResponse $jackedResponse, callable $streamCallback = null): void
     {
         if (!empty($jackedResponse->getError())) {
-            event(
-                JackedRequestError::class,
-                500,
-                $jackedResponse->getHeaders(),
-                $jackedResponse->getBody()
-            );
+            $this->eventDispatcher->dispatch(new JackedRequestError(
+                status: 500,
+                headers: $jackedResponse->getHeaders(),
+                error: $jackedResponse->getError(),
+            ));
             $response->status(500);
             $response->write($jackedResponse->getError());
             $response->end();
@@ -348,23 +367,35 @@ class Server
         $status = $jackedResponse->getStatus();
         $body = $jackedResponse->getBody();
         if ($status[0] >= 400 &&  $status[0] < 600) {
-            event(JackedRequestError::class, $status[0], $headers, $jackedResponse->getError());
+            $this->eventDispatcher->dispatch(new JackedRequestError(
+                status: $status[0],
+                headers: $headers,
+                error: $jackedResponse->getError(),
+            ));
         } else {
-            event(JackedRequestFinished::class, $status[0], $headers, $body);
+            $this->eventDispatcher->dispatch(new JackedRequestFinished(
+                status: $status[0],
+                headers: $headers,
+                body: $body,
+            ));
         }
 
         // header
         foreach ($headers as $headerKey => $headerValue) {
-            rescue(
-                fn() => $response->header($headerKey, $headerValue),
-                function () use ($status, $headers) {
-                    $this->logger->error('Server Error', [
-                        'headers' => $headers,
-                        'status' => $status,
-                    ]);
-                },
-                false,
-            );
+            try {
+                $response->header($headerKey, $headerValue);
+            } catch (Throwable $e) {
+                $this->output->error(
+                    'Error at header space:' . $e->getMessage(),
+                );
+                $this->logger->error('Server Error', [
+                    'headers' => $headers,
+                    'status' => $status,
+                    'error' => $e->getMessage(),
+                    'headerKey' => $headerKey,
+                    'headerValue' =>$headerValue,
+                ]);
+            }
         }
 
         // status
@@ -385,18 +416,23 @@ class Server
 
     private function getServerConfig(bool $ssl): array
     {
-        return array_merge(config('jacked-server.openswoole-server-settings', [
-            'document_root' => $this->publicDocumentRoot ?? public_path(),
+        return array_merge(Config::get('openswoole-server-settings', [
+
+            // base settings
+            'document_root' => $this->publicDocumentRoot ?? ROOT_DIR,
             'enable_static_handler' => true,
             'static_handler_locations' => [ '/imgs', '/css' ],
+
             // reactor and workers
-            'reactor_num' => Util::getCPUNum() + 2,
-            'worker_num' => Util::getCPUNum() + 2,
+            'reactor_num' => (int) Config::get('reactor-num', 4),
+            'worker_num' => (int) Config::get('worker-num', 4),
+
             // timeout
-            'max_request_execution_time' => config('jacked-server.timeout', 60),
+            'max_request_execution_time' => Config::get('timeout', 60),
+
         ]), ($ssl ? [
-            'ssl_cert_file' => config('jacked-server.ssl-cert-file'),
-            'ssl_key_file' => config('jacked-server.ssl-key-file'),
+            'ssl_cert_file' => Config::get('ssl-cert-file'),
+            'ssl_key_file' => Config::get('ssl-key-file'),
             'open_http_protocol' => true,
         ] : []));
     }

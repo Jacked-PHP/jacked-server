@@ -10,9 +10,7 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Tests\\": "tests/",
-            "App\\": "tests/Assets/laravel/app/",
-            "Database\\Factories\\": "tests/Assets/laravel/database/factories/"
+            "Tests\\": "tests/"
         }
     },
     "require": {
@@ -21,10 +19,13 @@
         "guzzlehttp/guzzle": "^7.7",
         "kanata-php/socket-conveyor": "^2.2",
         "textalk/websocket": "^1.5",
-        "kanata-php/conveyor-laravel-broadcaster": "^0.1",
-        "laravel/sanctum": "^3.3|^4.0",
         "lotharthesavior/hook": "^0.0.1",
-        "kanata-php/conveyor-server-client": "^0.1"
+        "kanata-php/conveyor-server-client": "^0.1",
+        "symfony/console": "^6.4",
+        "nesbot/carbon": "^2.72",
+        "vlucas/phpdotenv": "^5.6",
+        "monolog/monolog": "^3.7",
+        "symfony/event-dispatcher": "^7.1"
     },
     "extra": {
         "laravel": {
@@ -37,7 +38,6 @@
         }
     },
     "require-dev": {
-        "orchestra/testbench": "^8.8",
         "phpunit/phpunit": "^10.3",
         "openswoole/ide-helper": "^22.0",
         "kanata-php/mustachio": "^0.0.2",
@@ -47,18 +47,6 @@
         "phpstan/phpstan": "^1.10"
     },
     "scripts": {
-        "post-autoload-dump": [
-            "@clear",
-            "@prepare",
-            "@php vendor/bin/testbench package:discover --ansi"
-        ],
-        "clear": "@php vendor/bin/testbench package:purge-skeleton --ansi",
-        "prepare": "@php vendor/bin/testbench package:discover --ansi",
-        "build": "@php vendor/bin/testbench workbench:build --ansi",
-        "serve": [
-            "@build",
-            "@php vendor/bin/testbench serve"
-        ],
         "test": [
             "@php vendor/bin/phpunit"
         ]
