@@ -1,20 +1,21 @@
 #!/usr/bin/env php
 <?php
 
-const ROOT_DIR = __DIR__;
-
 require __DIR__.'/vendor/autoload.php';
 
 use JackedPhp\JackedServer\Commands\CompilePharCommand;
 use JackedPhp\JackedServer\Commands\RunCommand;
 use Symfony\Component\Console\Application;
 
+const ROOT_DIR = __DIR__;
+const MONITOR_CHANNEL = 'jacked-monitor';
+
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
 $dotenv->load();
 
 $application = new Application;
 
-$application->add(new RunCommand);
-$application->add(new CompilePharCommand);
+$application->add(new RunCommand('run'));
+$application->add(new CompilePharCommand('compile-phar'));
 
 $application->run();

@@ -2,23 +2,29 @@
 
 namespace Tests;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Orchestra\Testbench\Concerns\WithWorkbench;
+use PHPUnit\Framework\TestCase as BaseTestCase;
+use Dotenv\Dotenv;
+use Tests\Feature\Traits\ServerTrait;
 
-class TestCase extends \Orchestra\Testbench\TestCase
+class TestCase extends BaseTestCase
 {
-    use RefreshDatabase;
-    use WithWorkbench;
+    use ServerTrait;
 
-    protected $loadEnvironmentVariables = false;
-
-    public string $laravelPath;
-    public int $port = 8989;
-
-    protected function setUp(): void
+    public function setUp(): void
     {
-        parent::setUp();
+        define('ROOT_DIR', __DIR__ . '/Sample');
+        define('MONITOR_CHANNEL', 'jacked-monitor');
 
-        $this->setUpLaravel();
+        $dotenv = Dotenv::createImmutable(ROOT_DIR);
+        $dotenv->load();
+
+        parent::setUp();
+    }
+
+    public function tearDown(): void
+    {
+        self::tearServerDown();
+
+        parent::tearDown();
     }
 }

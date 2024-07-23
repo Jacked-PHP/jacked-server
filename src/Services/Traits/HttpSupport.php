@@ -121,7 +121,7 @@ trait HttpSupport
 
         $client = new CoroutineHttpClient($host, $port);
         $client->setHeaders([
-            'Host' => $host,
+            'Host' => $host . ':' . $port,
             'User-Agent' => 'Jacked Server HTTP Proxy',
         ]);
         $client->set([ 'timeout' => Config::get(
@@ -141,7 +141,9 @@ trait HttpSupport
         }
         $response->status($status);
 
-        $response->end($body);
+        $response->write($body);
+
+        $response->end();
     }
 
     protected function executeRequest(array $requestOptions, string $content, Response $response): JackedResponse|null

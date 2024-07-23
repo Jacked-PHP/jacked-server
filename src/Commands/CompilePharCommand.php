@@ -20,7 +20,7 @@ class CompilePharCommand extends Command
             ->addArgument('output', InputArgument::REQUIRED, 'Output file (e.g.: convert.phar).');
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         try {
             $pharFile = $input->getArgument('output');
@@ -44,7 +44,7 @@ class CompilePharCommand extends Command
             $defaultStub = $phar->createDefaultStub('jackit');
 
             // Add the rest of the apps files
-            $phar->buildFromDirectory(ROOT_DIR);
+            $phar->buildFromDirectory(ROOT_DIR); // @phpstan-ignore-line
 
             // Customize the stub to add the shebang
             $stub = "#!/usr/bin/env php \n" . $defaultStub;

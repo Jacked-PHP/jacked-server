@@ -4,45 +4,46 @@ namespace JackedPhp\JackedServer\Services;
 
 use Adoy\FastCGI\ForbiddenException;
 use Adoy\FastCGI\TimedOutException;
+use Exception;
 
 class FastCgiClient
 {
-    const VERSION_1            = 1;
+    public const VERSION_1            = 1;
 
-    const BEGIN_REQUEST        = 1;
-    const ABORT_REQUEST        = 2;
-    const END_REQUEST          = 3;
-    const PARAMS               = 4;
-    const STDIN                = 5;
-    const STDOUT               = 6;
-    const STDERR               = 7;
-    const DATA                 = 8;
-    const GET_VALUES           = 9;
-    const GET_VALUES_RESULT    = 10;
-    const UNKNOWN_TYPE         = 11;
-    const MAXTYPE              = self::UNKNOWN_TYPE;
+    public const BEGIN_REQUEST        = 1;
+    public const ABORT_REQUEST        = 2;
+    public const END_REQUEST          = 3;
+    public const PARAMS               = 4;
+    public const STDIN                = 5;
+    public const STDOUT               = 6;
+    public const STDERR               = 7;
+    public const DATA                 = 8;
+    public const GET_VALUES           = 9;
+    public const GET_VALUES_RESULT    = 10;
+    public const UNKNOWN_TYPE         = 11;
+    public const MAXTYPE              = self::UNKNOWN_TYPE;
 
-    const RESPONDER            = 1;
-    const AUTHORIZER           = 2;
-    const FILTER               = 3;
+    public const RESPONDER            = 1;
+    public const AUTHORIZER           = 2;
+    public const FILTER               = 3;
 
-    const REQUEST_COMPLETE     = 0;
-    const CANT_MPX_CONN        = 1;
-    const OVERLOADED           = 2;
-    const UNKNOWN_ROLE         = 3;
+    public const REQUEST_COMPLETE     = 0;
+    public const CANT_MPX_CONN        = 1;
+    public const OVERLOADED           = 2;
+    public const UNKNOWN_ROLE         = 3;
 
-    const MAX_CONNS            = 'MAX_CONNS';
-    const MAX_REQS             = 'MAX_REQS';
-    const MPXS_CONNS           = 'MPXS_CONNS';
+    public const MAX_CONNS            = 'MAX_CONNS';
+    public const MAX_REQS             = 'MAX_REQS';
+    public const MPXS_CONNS           = 'MPXS_CONNS';
 
-    const HEADER_LEN           = 8;
+    public const HEADER_LEN           = 8;
 
-    const REQ_STATE_WRITTEN    = 1;
-    const REQ_STATE_OK         = 2;
-    const REQ_STATE_ERR        = 3;
-    const REQ_STATE_TIMED_OUT  = 4;
+    public const REQ_STATE_WRITTEN    = 1;
+    public const REQ_STATE_OK         = 2;
+    public const REQ_STATE_ERR        = 3;
+    public const REQ_STATE_TIMED_OUT  = 4;
 
-    const FCGI_MAX_LENGTH  = 0xffff;
+    public const FCGI_MAX_LENGTH  = 0xffff;
 
     /**
      * Socket
@@ -488,7 +489,6 @@ class FastCgiClient
      */
     public function wait_for_response($requestId, $timeoutMs = 0)
     {
-
         if (!isset($this->_requests[$requestId])) {
             throw new \Exception('Invalid request id given');
         }
@@ -558,14 +558,11 @@ class FastCgiClient
 
         switch (ord($resp['content'][4])) {
             case self::CANT_MPX_CONN:
-                throw new \Exception('This app can\'t multiplex [CANT_MPX_CONN]');
-                break;
+                throw new Exception('This app can\'t multiplex [CANT_MPX_CONN]');
             case self::OVERLOADED:
-                throw new \Exception('New request rejected; too busy [OVERLOADED]');
-                break;
+                throw new Exception('New request rejected; too busy [OVERLOADED]');
             case self::UNKNOWN_ROLE:
-                throw new \Exception('Role value not known [UNKNOWN_ROLE]');
-                break;
+                throw new Exception('Role value not known [UNKNOWN_ROLE]');
             case self::REQUEST_COMPLETE:
                 return $this->_requests[$requestId]['response'];
         }

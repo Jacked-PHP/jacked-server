@@ -9,15 +9,18 @@ use Conveyor\Events\MessageReceivedEvent;
 use Conveyor\Events\PreServerStartEvent;
 use Conveyor\Events\ServerStartedEvent;
 use Conveyor\Helpers\Arr;
-use Conveyor\SubProtocols\Conveyor\Broadcast;
 use Conveyor\SubProtocols\Conveyor\Conveyor;
 use Conveyor\SubProtocols\Conveyor\Persistence\Interfaces\GenericPersistenceInterface;
 use Exception;
 use Hook\Filter;
-use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Str;
+use JackedPhp\JackedServer\Data\OpenSwooleConfig;
+use JackedPhp\JackedServer\Data\RequestNotificationData;
 use JackedPhp\JackedServer\Events\JackedRequestError;
 use JackedPhp\JackedServer\Events\JackedRequestFinished;
+use JackedPhp\JackedServer\Events\JackedServerRequestIntercepted;
 use JackedPhp\JackedServer\Events\JackedServerStarted;
+use JackedPhp\JackedServer\Exceptions\AuthorizationException;
 use JackedPhp\JackedServer\Exceptions\RedirectException;
 use JackedPhp\JackedServer\Helpers\Config;
 use JackedPhp\JackedServer\Services\Logger\EchoHandler;
@@ -28,6 +31,7 @@ use Monolog\Handler\StreamHandler;
 use Monolog\Level;
 use Monolog\Logger;
 use OpenSwoole\Constant;
+use OpenSwoole\Coroutine\Http\Client as CoroutineHttpClient;
 use OpenSwoole\Http\Request;
 use OpenSwoole\Http\Response;
 use OpenSwoole\Server as OpenSwooleBaseServer;
@@ -73,22 +77,12 @@ class Server
     ) {
         $this->inputFile = $inputFile ?? Config::get(
             'input-file',
-            ROOT_DIR . '/index.php',
+            ROOT_DIR . '/index.php', // @phpstan-ignore-line
         );
 
-        $this->logger = new Logger(name: 'jacked-server-log');
-        if ($logPath !== null) {
-            $this->logger->pushHandler(new StreamHandler(
-                stream: $logPath ?? Config::get('log.stream', ROOT_DIR . '/jacked-server.log'),
-                level: $logLevel ?? Config::get('log.level', Level::Warning),
-            ));
-        } else {
-            $this->logger->pushHandler(new EchoHandler(
-                level: $logLevel ?? Config::get('log.level', Level::Warning)
-            ));
-        }
+        $this->eventDispatcher = $eventDispatcher ?? new EventDispatcher();
 
-        $this->eventDispatcher = $eventDispatcher ?? new EventDispatcher;
+        $this->prepareLogger(logPath: $logPath, logLevel: $logLevel);
     }
 
     /**
@@ -102,9 +96,11 @@ class Server
                 'SSL is enabled, but a port was specified. ' .
                 'The port will be ignored in favor of the SSL port.',
             );
-            $this->output->warning(
-                'SSL is enabled, but a port was specified. ' .
+
+            $this->print(
+                message: 'SSL is enabled, but a port was specified. ' .
                 'The port will be ignored in favor of the SSL port.',
+                type: 'warning',
             );
             $this->port = null;
         }
@@ -123,24 +119,25 @@ class Server
             port: $this->port ?? $primaryPort,
             mode: Config::get('server-type', OpenSwooleBaseServer::POOL_MODE),
             ssl: $ssl ? Constant::SOCK_TCP | Constant::SSL : Constant::SOCK_TCP,
-            serverOptions: $this->getServerConfig($ssl),
+            serverOptions: $this->getServerConfig($ssl)->getSnakeCasedData(),
             conveyorOptions: array_merge(Config::get('conveyor-options', []), [
                 Constants::USE_ACKNOWLEDGMENT => true, // required for broadcasting
             ]),
             eventListeners: [
-                Constants::EVENT_SERVER_STARTED => fn(ServerStartedEvent $event) =>
-                $this->handleStart($event->server),
+                Constants::EVENT_SERVER_STARTED => fn(ServerStartedEvent $event)
+                    => $this->handleStart($event->server),
                 Constants::EVENT_PRE_SERVER_START => function (PreServerStartEvent $event) use ($ssl) {
                     if ($ssl) {
                         $event->server->listen(
-                            $event->server->host,
-                            Config::get('port', 8080),
-                            Constant::SOCK_TCP,
+                            host: $event->server->host,
+                            port: Config::get('port', 8080),
+                            sockType: Constant::SOCK_TCP,
                         )->on('request', [$this, 'sslRedirectRequest']);
                     }
                     $event->server->on('handshake', [$this, 'handleWsHandshake']);
                 },
-                Constants::EVENT_MESSAGE_RECEIVED => [$this, 'handleWsMessage'],
+                Constants::EVENT_MESSAGE_RECEIVED => fn(MessageReceivedEvent $event)
+                    => $this->handleWsMessage($event),
             ],
             persistence: $this->wsPersistence,
         );
@@ -148,7 +145,7 @@ class Server
 
     public function handleWsHandshake(Request $request, Response $response): bool
     {
-        if (Config::get('websocket.enabled', false) !== true) {
+        if (Config::get('websocket.enabled', false) !== 'true') {
             $response->status(401);
             $response->end('WebSocket Not enabled!');
             return false;
@@ -167,13 +164,7 @@ class Server
 
         // check for authorization
         try {
-            // TODO: adjust this to reach out to laravel
-            try {
-                $broadcaster = Broadcast::driver('conveyor');
-            } catch (Exception $e) {
-                // silence...
-            }
-            $wsAuth = Config::get('websocket.broadcaster');
+            $wsAuth = Config::get('websocket.authorization');
 
             parse_str(Arr::get($request->server, 'query_string') ?? '', $query);
             $token = Arr::get($query, 'token');
@@ -182,17 +173,9 @@ class Server
                 throw new AuthorizationException('WebSocket Connection Not authorized!');
             }
 
-            if ($wsAuth && null !== $broadcaster) {
-                $user = Token::byToken($token)->first()?->user;
-                $broadcaster->validateConnection($token);
-                $broadcaster->associateUser(
-                    fd: $request->fd,
-                    user: $user,
-                    assocPersistence: Arr::get($this->wsPersistence, 'user-associations'),
-                );
-            }
+            // TODO: Implement WebSocket Authorization
         } catch (AuthorizationException $e) {
-            $this->logger->info($this->logPrefix . $e->getMessage());
+            $this->logger->error($this->logPrefix . $e->getMessage());
             $response->status(401);
             $response->end($e->getMessage());
             return false;
@@ -241,13 +224,10 @@ class Server
         $message = 'OpenSwoole Server started'
             . ' on ' . $server->host . ':' . $server->port
             . ' at ' . Carbon::now()->format('Y-m-d H:i:s');
+
         $this->logger->info($this->logPrefix . $message);
 
-        if ($this->output instanceof OutputStyle) {
-            $this->output->success($message);
-        } else {
-            echo $message . PHP_EOL;
-        }
+        $this->print($message, 'success');
 
         $this->eventDispatcher->dispatch(new JackedServerStarted(
             host: $server->host,
@@ -326,11 +306,30 @@ class Server
             return;
         }
 
-        $this->output->writeln(
-            'Request received: '
-            . $request->server['request_method'] . ' '
-            . $request->server['request_uri']
-        );
+        $this->notifyRequestToMonitor($request);
+
+        /**
+         * Description: This is a filter for requests interceptor.
+         * Name: jacked_intercept_requests
+         * Params:
+         *   - $value: bool
+         * Returns: bool
+         */
+        if (
+            Filter::applyFilters(
+                tag: 'jacked_intercept_requests',
+                value: in_array(
+                    $request->server['request_uri'],
+                    Config::get('request-interceptor.uris', []),
+                ),
+            )
+        ) {
+            $this->eventDispatcher->dispatch(new JackedServerRequestIntercepted(
+                request: $request,
+                response: $response,
+            ));
+            return;
+        }
 
         try {
             [ $requestOptions, $content ] = $this->gatherRequestInfo($request);
@@ -348,8 +347,74 @@ class Server
         }
     }
 
-    private function sendResponse(Response $response, JackedResponse $jackedResponse, callable $streamCallback = null): void
+    private function notifyRequestToMonitor(Request $request): void
     {
+        $this->print(
+            message: '<fg=#5b5b5b>' . Carbon::now()->format('Y-m-d H:i:s') . '</> - '
+                . '<fg=#6fa8dc;options=bold>' . $request->server['request_method'] . '</> '
+                . $request->server['request_uri'],
+            type: 'writeln',
+        );
+
+        if ($request->server['request_uri'] === '/conveyor/message') {
+            return;
+        }
+
+        if (!Config::get('audit.enabled')) {
+            return;
+        }
+
+        $this->sendWsMessage(
+            channel: MONITOR_CHANNEL, // @phpstan-ignore-line
+            message: RequestNotificationData::from([
+                'method' => $request->server['request_method'],
+                'uri' => $request->server['request_uri'],
+                'headers' => $request->header,
+                'body' => $request->rawContent(),
+            ])->toJson(),
+        );
+    }
+
+    private function sendWsMessage(string $channel, string $message): void
+    {
+        $client = new CoroutineHttpClient($this->host, $this->port);
+        $client->setHeaders([
+            'Host' => $this->host . ':' . $this->port,
+            'User-Agent' => 'Jacked Server HTTP Proxy',
+            'Content-Type' => 'application/json',
+        ]);
+        $client->set([ 'timeout' => Config::get(
+            key: 'jacked-server.proxy.timeout',
+            default: 5,
+        )]);
+        $client->setMethod('POST');
+        $client->setData(json_encode([
+            'channel' => $channel,
+            'message' => $message,
+        ]));
+        $client->execute('/conveyor/message');
+    }
+
+    private function prepareLogger(?string $logPath, ?int $logLevel): void
+    {
+        $this->logger = new Logger(name: 'jacked-server-log');
+        if ($logPath !== null) {
+            $this->logger->pushHandler(new StreamHandler(
+                stream: $logPath,
+                level: $logLevel ?? Config::get('log.level', Level::Warning),
+            ));
+        } else {
+            $this->logger->pushHandler(new EchoHandler(
+                level: $logLevel ?? Config::get('log.level', Level::Warning)
+            ));
+        }
+    }
+
+    private function sendResponse(
+        Response $response,
+        JackedResponse $jackedResponse,
+        callable $streamCallback = null
+    ): void {
         if (!empty($jackedResponse->getError())) {
             $this->eventDispatcher->dispatch(new JackedRequestError(
                 status: 500,
@@ -385,15 +450,17 @@ class Server
             try {
                 $response->header($headerKey, $headerValue);
             } catch (Throwable $e) {
-                $this->output->error(
-                    'Error at header space:' . $e->getMessage(),
+                $this->print(
+                    message: 'Error at header space:' . $e->getMessage(),
+                    type: 'error',
                 );
+
                 $this->logger->error('Server Error', [
                     'headers' => $headers,
                     'status' => $status,
                     'error' => $e->getMessage(),
                     'headerKey' => $headerKey,
-                    'headerValue' =>$headerValue,
+                    'headerValue' => $headerValue,
                 ]);
             }
         }
@@ -414,12 +481,17 @@ class Server
         }
     }
 
-    private function getServerConfig(bool $ssl): array
+    /**
+     * @param bool $ssl
+     * @return OpenSwooleConfig
+     */
+    private function getServerConfig(bool $ssl): OpenSwooleConfig
     {
-        return array_merge(Config::get('openswoole-server-settings', [
-
+        $camelCasedSettings = [];
+        foreach (
+            array_merge(Config::get('openswoole-server-settings', [
             // base settings
-            'document_root' => $this->publicDocumentRoot ?? ROOT_DIR,
+            'document_root' => $this->publicDocumentRoot ?? ROOT_DIR, // @phpstan-ignore-line
             'enable_static_handler' => true,
             'static_handler_locations' => [ '/imgs', '/css' ],
 
@@ -429,11 +501,36 @@ class Server
 
             // timeout
             'max_request_execution_time' => Config::get('timeout', 60),
-
-        ]), ($ssl ? [
+            ]), ($ssl ? [
             'ssl_cert_file' => Config::get('ssl-cert-file'),
             'ssl_key_file' => Config::get('ssl-key-file'),
             'open_http_protocol' => true,
-        ] : []));
+            ] : [])) as $key => $value
+        ) {
+            $camelCasedSettings[Str::camel($key)] = $value;
+        }
+
+        return OpenSwooleConfig::from($camelCasedSettings);
+    }
+
+    /**
+     * @param string $message
+     * @param string $type Possible values: 'info', 'warning', 'error', 'writeln'
+     * @return void
+     * @throws RedirectException
+     */
+    private function print(string $message, string $type = 'info'): void
+    {
+        if (!in_array($type, ['success', 'info', 'warning', 'error', 'writeln'])) {
+            $this->logger->error('Invalid type for server echo: ' . $type);
+            echo 'Message: ' . $message . PHP_EOL;
+            return;
+        }
+
+        if ($this->output instanceof OutputStyle) {
+            $this->output->{$type}($message);
+        } else {
+            echo $message . PHP_EOL;
+        }
     }
 }

@@ -2,126 +2,93 @@
 
 namespace Tests\Feature;
 
-use Illuminate\Support\Facades\Http;
-use Tests\Feature\Traits\ServerTrait;
+use JackedPhp\JackedServer\Helpers\Config;
+use OpenSwoole\Coroutine;
+use OpenSwoole\Coroutine\Http\Client as CoroutineHttpClient;
+use OpenSwoole\Process;
 use Tests\TestCase;
 
 class ServerTest extends TestCase
 {
-    use ServerTrait;
-
-    public function test_can_set_custom_input_file()
+    public function test_can_get_base_input()
     {
-        $this->startServer(
-            rtrim(__DIR__, '/Feature') . '/Assets/assert-ok.php',
-            rtrim(__DIR__, '/Feature') . '/Assets',
-        );
+        $serverPid = $this->startServer();
+        $status = null;
+        $outcome = '';
 
-        $response = Http::get('http://127.0.0.1:' . $this->port . '/assert-ok.php');
-        $this->assertEquals(200, $response->status());
-        $this->assertEquals('ok', $response->body());
+        Coroutine::run(function () use (&$outcome, &$status) {
+            $client = new CoroutineHttpClient('127.0.0.1', Config::get('port'));
+            $client->execute('/');
+            $status = $client->getStatusCode();
+            $outcome = $client->getBody();
+        });
+
+        $expected = 'Hello World!';
+        $this->assertEquals(
+            expected: $expected,
+            actual: $outcome,
+            message: 'Response body is not as expected: ' . $outcome . ' !== ' . $expected,
+        );
+        $this->assertEquals(200, $status);
+
+        Process::kill($serverPid);
     }
 
-    public function test_can_run_server()
+    public function test_can_send_post()
     {
-        // dd($this->laravelPath);
-        $this->startServer(
-            $this->laravelPath . '/public/index.php',
-        );
+        $serverPid = $this->startServer();
+        $status = null;
+        $outcome = '';
+        $expectedData = json_encode(['data' => 'test']);
 
-        $response = Http::get('http://127.0.0.1:' . $this->port);
-        $this->assertEquals(200, $response->status());
-        $this->assertEquals('ok', $response->body());
-    }
-
-    public function test_can_get_csrf_token_via_api_request()
-    {
-        $this->startServer(
-            $this->laravelPath . '/public/index.php',
-        );
-
-        $response = Http::get('http://127.0.0.1:' . $this->port . '/get-csrf');
-        $this->assertEquals(200, $response->status());
-    }
-
-    public function test_can_send_post_to_server_keeping_session()
-    {
-        $this->startServer(
-            $this->laravelPath . '/public/index.php',
-        );
-
-        $csrfResponse = Http::withCookies([], '127.0.0.1:' . $this->port)
-            ->get('http://127.0.0.1:' . $this->port . '/get-csrf');
-        $csrf = $csrfResponse->body();
-
-        $response = Http
-            ::withCookies(...$this->getCookiesFromResponse($csrfResponse))
-            ->withHeaders([
-                'X-CSRF-TOKEN' => $csrf,
+        Coroutine::run(function () use (&$outcome, &$status, $expectedData) {
+            $client = new CoroutineHttpClient('127.0.0.1', Config::get('port'));
+            $client->setMethod('POST');
+            $client->setHeaders([
                 'Content-Type' => 'application/json',
-            ])
-            ->post('http://127.0.0.1:' . $this->port . '/form', [
-                'test' => 'ok',
             ]);
+            $client->setData($expectedData);
+            $client->execute('/');
+            $status = $client->getStatusCode();
+            $outcome = $client->getBody();
+        });
 
-        $this->assertEquals(200, $response->status());
-        $this->assertEquals('ok', $response->json('test'));
+        $this->assertEquals(
+            expected: $expectedData,
+            actual: $outcome,
+            message: 'Response body is not as expected: ' . $outcome . ' !== ' . $expectedData,
+        );
+        $this->assertEquals(200, $status);
+
+        Process::kill($serverPid);
     }
 
-    public function test_can_get_200()
+    public function test_can_send_form()
     {
-        $this->startServer(
-            $this->laravelPath . '/public/index.php',
-        );
-        $this->assertEquals(
-            200,
-            Http::get('http://127.0.0.1:' . $this->port . '/get-200')->status()
-        );
-    }
+        $serverPid = $this->startServer();
+        $status = null;
+        $outcome = '';
+        $expectedData = ['data' => 'test'];
 
-    public function test_can_get_302()
-    {
-        $this->startServer(
-            $this->laravelPath . '/public/index.php',
-        );
-        $this->assertEquals(
-            302,
-            Http::withOptions(['allow_redirects' => false])
-                ->get('http://127.0.0.1:' . $this->port . '/get-302')
-                ->status()
-        );
-    }
+        Coroutine::run(function () use (&$outcome, &$status, $expectedData) {
+            $client = new CoroutineHttpClient('127.0.0.1', Config::get('port'));
+            $client->setMethod('POST');
+            $client->setHeaders([
+                'Content-Type' => 'application/x-www-form-urlencoded',
+            ]);
+            $client->setData($expectedData);
+            $client->execute('/');
+            $status = $client->getStatusCode();
+            $outcome = $client->getBody();
+        });
 
-    public function test_can_get_400()
-    {
-        $this->startServer(
-            $this->laravelPath . '/public/index.php',
-        );
         $this->assertEquals(
-            400,
-            Http::get('http://127.0.0.1:' . $this->port . '/get-400')->status()
+            expected: json_encode($expectedData),
+            actual: $outcome,
+            message: 'Response body is not as expected: ' . $outcome . ' !== ' . json_encode($expectedData),
         );
-    }
+        $this->assertEquals(200, $status);
 
-    public function test_can_get_404()
-    {
-        $this->startServer(
-            $this->laravelPath . '/public/index.php',
-        );
-        $this->assertEquals(
-            404,
-            Http::get('http://127.0.0.1:' . $this->port . '/get-404')->status()
-        );
-    }
-
-    public function test_can_get_500()
-    {
-        $this->startServer(
-            $this->laravelPath . '/public/index.php',
-        );
-        $this->assertEquals(
-            500,
-            Http::get('http://127.0.0.1:' . $this->port . '/get-500')->status()
-        );
+        Process::kill($serverPid);
     }
 }

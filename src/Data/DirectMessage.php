@@ -2,27 +2,27 @@
 
 namespace JackedPhp\JackedServer\Data;
 
-class DirectMessage
+use Bag\Bag;
+use JackedPhp\JackedServer\Data\Traits\DataBagHelper;
+
+readonly class DirectMessage extends Bag
 {
+    use DataBagHelper;
+
     public function __construct(
         public string $channel,
         public string $message,
     ) {
     }
 
-    public static function fromArray(array $data): self
-    {
-        return new self(
-            channel: $data['channel'],
-            message: $data['message'],
-        );
-    }
-
-    public function toArray(): array
+    /**
+     * @return array<string, array<int, string>>
+     */
+    public static function rules(): array
     {
         return [
-            'channel' => $this->channel,
-            'message' => $this->message,
+            'channel' => ['required', 'string'],
+            'message' => ['required', 'string'],
         ];
     }
 }
