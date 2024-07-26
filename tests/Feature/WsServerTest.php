@@ -10,7 +10,7 @@ use Kanata\ConveyorServerClient\Client;
 
 class WsServerTest extends TestCase
 {
-    public function test_can_get_base_input()
+    public function test_can_broadcast_message()
     {
         $serverPid = $this->startServer();
 
