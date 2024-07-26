@@ -8,7 +8,7 @@ use OpenSwoole\Coroutine\Http\Client as CoroutineHttpClient;
 use OpenSwoole\Process;
 use Tests\TestCase;
 
-class ServerTest extends TestCase
+class HttpServerTest extends TestCase
 {
     public function test_can_get_base_input()
     {
