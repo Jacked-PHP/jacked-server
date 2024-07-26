@@ -128,6 +128,6 @@ return [
         // These are URIs that will be intercepted by the Jacked Server, and dispatch the event
         // JackedPhp\JackedServer\Events\RequestInterceptedEvent::class with the request and
         // response objects. e.g. /api/v1/intercepted,/api/v1/intercepted2
-        'uris' => explode(',', $_ENV['JACKED_SERVER_REQUEST_INTERCEPTED_URIS']) ?? [],
+        'uris' => explode(',', $_ENV['JACKED_SERVER_REQUEST_INTERCEPTED_URIS'] ?? '') ?? [],
     ],
 ];
