@@ -8,7 +8,6 @@ use Exception;
 use Hook\Filter;
 use JackedPhp\JackedServer\Events\JackedRequestReceived;
 use JackedPhp\JackedServer\Exceptions\RedirectException;
-use JackedPhp\JackedServer\Helpers\Config;
 use JackedPhp\JackedServer\Services\FastCgiClient;
 use JackedPhp\JackedServer\Services\Response as JackedResponse;
 use OpenSwoole\Http\Request;
@@ -124,10 +123,7 @@ trait HttpSupport
             'Host' => $host . ':' . $port,
             'User-Agent' => 'Jacked Server HTTP Proxy',
         ]);
-        $client->set([ 'timeout' => Config::get(
-            key: 'jacked-server.proxy.timeout',
-            default: 5,
-        )]);
+        $client->set([ 'timeout' => $this->timeout]);
         $status = $client->execute($request->server['request_uri']);
 
         $headers = $client->headers;
@@ -164,11 +160,11 @@ trait HttpSupport
                 'time' => Carbon::now()->format('Y-m-d H:i:s'),
             ]);
             $client = new FastCgiClient(
-                host: Config::get('fastcgi.host', '127.0.0.1'),
-                port: Config::get('fastcgi.port', 9000),
+                host: $this->fastcgiHost,
+                port: $this->fastcgiPort,
             );
-            $client->setConnectTimeout(Config::get('timeout', 60) * 1000);
-            $client->setReadWriteTimeout(Config::get('readwrite-timeout', 60) * 1000);
+            $client->setConnectTimeout($this->timeout * 1000);
+            $client->setReadWriteTimeout($this->readWriteTimeout * 1000);
 
             $result = $client->requestStream($requestOptions, $content, function ($data) use ($response) {
                 $response->write($data);
@@ -240,6 +236,7 @@ trait HttpSupport
         $this->addCookies($requestOptions, $cookies);
 
         $requestUri = Arr::get($serverInfo, 'request_uri', '');
+
         return array_change_key_case(array_filter(array_merge($requestOptions, [
             'path_info' => $this->getPathInfo($serverInfo),
             'document_root' => $this->getDocumentRoot(''),
@@ -250,7 +247,7 @@ trait HttpSupport
             'server_protocol' => Arr::get(
                 $serverInfo,
                 'server_protocol',
-                Config::get('server-protocol', 'HTTP/1.1'),
+                $this->serverProtocol,
             ),
             'server_name' => Arr::get($requestOptions, 'http_host'),
         ])), CASE_UPPER);
@@ -298,10 +295,7 @@ trait HttpSupport
          */
         $documentRoot = $this->documentRoot ?? Filter::applyFilters(
             'jacked_document_root',
-            Config::get(
-                'openswoole-server-settings.document_root',
-                __DIR__ . '/public',
-            ),
+            $this->documentRoot,
             $requestUri,
         );
 

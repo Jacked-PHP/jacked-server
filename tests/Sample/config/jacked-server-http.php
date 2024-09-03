@@ -36,7 +36,7 @@ return [
     'input-file' => '/index.php',
     'openswoole-server-settings' => [
         // @phpstan-ignore-next-line
-        'document_root' => $_ENV['JACKED_SERVER_DOCUMENT_ROOT'] ?? ROOT_DIR,
+        'document_root' => ROOT_DIR,
         'enable_static_handler' => $_ENV['JACKED_SERVER_STATIC_ENABLED'] ?? true,
         'static_handler_locations' => explode(
             ',',

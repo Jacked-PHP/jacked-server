@@ -2,9 +2,13 @@
 
 namespace JackedPhp\JackedServer\Commands;
 
+use JackedPhp\JackedServer\Commands\Traits\HasPersistence;
 use JackedPhp\JackedServer\Data\ServerParams;
+use JackedPhp\JackedServer\Data\ServerPersistence;
 use JackedPhp\JackedServer\Helpers\Config;
 use JackedPhp\JackedServer\Services\Server;
+use JackedPhp\LiteConnect\SQLiteFactory;
+use OpenSwoole\Core\Coroutine\Pool\ClientPool;
 use OpenSwoole\Coroutine;
 use OpenSwoole\Coroutine\System;
 use OpenSwoole\Process;
@@ -17,6 +21,8 @@ use Symfony\Component\EventDispatcher\EventDispatcher;
 
 class RunCommand extends Command
 {
+    use HasPersistence;
+
     public const OPTION_HOST = 'host';
     public const OPTION_PORT = 'port';
     public const OPTION_INPUT_FILE = 'inputFile';
@@ -25,7 +31,7 @@ class RunCommand extends Command
     public const OPTION_LOG_PATH = 'logPath';
     public const OPTION_LOG_LEVEL = 'logLevel';
 
-    // private ?string $name = 'run';
+    private ?string $name = 'run';
     protected static $defaultName = 'run';
 
     protected static $defaultDescription = 'JackedPHP OpenSwoole Server';
@@ -100,6 +106,7 @@ class RunCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $this->applyPidFile();
+        $connectionPool = $this->initializeDatabase();
 
         $io = new SymfonyStyle($input, $output);
 
@@ -113,18 +120,21 @@ class RunCommand extends Command
             'logLevel' => $input->getOption(self::OPTION_LOG_LEVEL),
         ]);
 
-        // $this->startServerProcess(io: $io);
-        (new Server(
-            host: $this->params->host,
-            port: $this->params->port,
-            inputFile: $this->params->inputFile,
-            documentRoot: $this->params->documentRoot,
-            publicDocumentRoot: $this->params->publicDocumentRoot,
-            output: $io,
-            eventDispatcher: new EventDispatcher(),
-            logPath: $this->params->logPath,
-            logLevel: $this->params->logLevel,
-        ))->run();
+        Server::init()
+            ->host($this->params->host)
+            ->port($this->params->port)
+            ->inputFile($this->params->inputFile)
+            ->documentRoot($this->params->documentRoot)
+            ->publicDocumentRoot($this->params->publicDocumentRoot)
+            ->output($io)
+            ->eventDispatcher(new EventDispatcher())
+            ->serverPersistence(new ServerPersistence(
+                connectionPool: $connectionPool,
+                conveyorPersistence: [],
+            ))
+            ->logPath($this->params->logPath)
+            ->logLevel($this->params->logLevel)
+            ->run();
 
         Coroutine::run(function () use ($io) {
             go(function () use ($io) {
@@ -143,6 +153,24 @@ class RunCommand extends Command
         return Command::SUCCESS;
     }
 
+    protected function initializeDatabase(): ClientPool
+    {
+        if (file_exists(Config::get('persistence.connections.' . Config::get('persistence.default') . '.database'))) {
+            unlink(Config::get('persistence.connections.' . Config::get('persistence.default') . '.database'));
+            touch(Config::get('persistence.connections.' . Config::get('persistence.default') . '.database'));
+        }
+
+        $connectionPool = new ClientPool(
+            factory: SQLiteFactory::class,
+            config: Config::get('persistence.connections.' . Config::get('persistence.default')),
+            size: 1,
+        );
+
+        $this->applyMigration(pool: $connectionPool);
+
+        return $connectionPool;
+    }
+
     protected function applyPidFile(): void
     {
         $pidFile = ROOT_DIR . '/jacked-server.pid';
@@ -150,24 +178,5 @@ class RunCommand extends Command
             unlink($pidFile);
         }
         file_put_contents($pidFile, getmypid());
-    }
-
-    protected function startServerProcess(SymfonyStyle $io): int
-    {
-        $serverProcess = new Process(function () use ($io) {
-            (new Server(
-                host: $this->params->host,
-                port: $this->params->port,
-                inputFile: $this->params->inputFile,
-                documentRoot: $this->params->documentRoot,
-                publicDocumentRoot: $this->params->publicDocumentRoot,
-                output: $io,
-                eventDispatcher: new EventDispatcher(),
-                logPath: $this->params->logPath,
-                logLevel: $this->params->logLevel,
-            ))->run();
-        });
-
-        return $serverProcess->start();
     }
 }

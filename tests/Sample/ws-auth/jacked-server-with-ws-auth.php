@@ -10,7 +10,7 @@ return [
     // ------------------------------------------------------------
 
     'host' => $_ENV['JACKED_SERVER_HOST'] ?? '0.0.0.0',
-    'port' => 8080,
+    'port' => 8081,
     'server-type' => $_ENV['JACKED_SERVER_SERVER_TYPE'] ?? 2,
     'timeout' => $_ENV['JACKED_SERVER_TIMEOUT'] ?? 60,
     'readwrite-timeout' => $_ENV['JACKED_SERVER_READWRITE_TIMEOUT'] ?? 60,
@@ -33,7 +33,7 @@ return [
     'reactor-num' => $_ENV['JACKED_SERVER_REACTOR_NUM'] ?? Util::getCPUNum() + 2,
     'worker-num' => $_ENV['JACKED_SERVER_WORKER_NUM'] ?? Util::getCPUNum() + 2,
     // @phpstan-ignore-next-line
-    'input-file' => '/index.php',
+    'input-file' => $_ENV['JACKED_SERVER_INPUT_FILE'] ?? ROOT_DIR . '/index.php',
     'openswoole-server-settings' => [
         // @phpstan-ignore-next-line
         'document_root' => $_ENV['JACKED_SERVER_DOCUMENT_ROOT'] ?? ROOT_DIR,
@@ -58,13 +58,17 @@ return [
         // @phpstan-ignore-next-line
         // 'pid_file' => $_ENV['JACKED_SERVER_PID_FILE'] ?? ROOT_DIR . '/jacked-server.pid',
     ],
+    'conveyor-options' => [
+        'websocket-auth-token' => $_ENV['JACKED_SERVER_WEBSOCKET_AUTH_TOKEN'] ?? null,
+        'websocket-auth-url' => $_ENV['JACKED_SERVER_WEBSOCKET_AUTH_URL'] ?? null,
+    ],
 
     // ------------------------------------------------------------
     // Audit
     // ------------------------------------------------------------
 
     'audit' => [
-        'enabled' => $_ENV['JACKED_SERVER_AUDIT_ENABLED'] ?? false,
+        'enabled' => true,
     ],
 
     // ------------------------------------------------------------
@@ -100,10 +104,10 @@ return [
 
     'websocket' => [
         'enabled' => true,
-        'secret' => $_ENV['JACKED_SERVER_WEBSOCKET_SECRET'] ?? null,
-        'token' => $_ENV['JACKED_SERVER_WEBSOCKET_TOKEN'] ?? null,
-        'auth' => false,
-        'acknowledgment' => $_ENV['JACKED_SERVER_WEBSOCKET_USE_ACKNOWLEDGMENT'] ?? false,
+        'secret' => 'secret',
+        'token' => '12345',
+        'auth' => true,
+        'acknowledgment' => false,
     ],
 
     // ------------------------------------------------------------
@@ -122,11 +126,10 @@ return [
     // ------------------------------------------------------------
 
     'persistence' => [
-        'default' => $_ENV['JACKED_SERVER_PERSISTENCE_DRIVER'] ?? 'sqlite',
+        'default' => 'sqlite',
         'connections' => [
             'sqlite' => [
-                'driver' => 'sqlite',
-                'database' => $_ENV['JACKED_SERVER_PERSISTENCE_SQLITE_DATABASE'] ?? ':memory:',
+                'database' => ROOT_DIR . '/ws-auth/database.sqlite',
             ],
         ],
     ]

@@ -16,6 +16,7 @@
     "require": {
         "php": ">=8.2",
         "ext-openswoole": "22.*",
+        "ext-pcntl": "*",
         "adoy/fastcgi-client": "^1.0",
         "guzzlehttp/guzzle": "^7.7",
         "kanata-php/socket-conveyor": "^2.2",
@@ -29,7 +30,8 @@
         "symfony/event-dispatcher": "^7.1",
         "openswoole/core": "^22.1",
         "dshafik/bag": "^1.0",
-        "ext-pcntl": "*"
+        "jacked-php/lite-connect": "^0.0",
+        "firebase/php-jwt": "^6.10"
     },
     "extra": {
         "laravel": {

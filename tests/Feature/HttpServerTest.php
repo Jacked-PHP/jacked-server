@@ -12,12 +12,14 @@ class HttpServerTest extends TestCase
 {
     public function test_can_get_base_input()
     {
-        $serverPid = $this->startServer();
+        $configFile = ROOT_DIR . '/config/jacked-server-http.php';
+
+        $serverPid = $this->startServer(configFile: $configFile);
         $status = null;
         $outcome = '';
 
-        Coroutine::run(function () use (&$outcome, &$status) {
-            $client = new CoroutineHttpClient('127.0.0.1', Config::get('port'));
+        Coroutine::run(function () use (&$outcome, &$status, $configFile) {
+            $client = new CoroutineHttpClient('127.0.0.1', Config::get('port', configFile: $configFile));
             $client->execute('/');
             $status = $client->getStatusCode();
             $outcome = $client->getBody();
@@ -27,16 +29,18 @@ class HttpServerTest extends TestCase
         $this->assertEquals(
             expected: $expected,
             actual: $outcome,
-            message: 'Response body is not as expected: ' . $outcome . ' !== ' . $expected,
         );
         $this->assertEquals(200, $status);
 
-        Process::kill($serverPid);
+        Process::kill($serverPid, SIGKILL);
+        sleep(3);
     }
 
     public function test_can_send_post()
     {
-        $serverPid = $this->startServer();
+        $configFile = ROOT_DIR . '/config/jacked-server-http.php';
+
+        $serverPid = $this->startServer(configFile: $configFile);
         $status = null;
         $outcome = '';
         $expectedData = json_encode(['data' => 'test']);
@@ -60,12 +64,15 @@ class HttpServerTest extends TestCase
         );
         $this->assertEquals(200, $status);
 
-        Process::kill($serverPid);
+        Process::kill($serverPid, SIGKILL);
+        sleep(3);
     }
 
     public function test_can_send_form()
     {
-        $serverPid = $this->startServer();
+        $configFile = ROOT_DIR . '/config/jacked-server-http.php';
+
+        $serverPid = $this->startServer(configFile: $configFile);
         $status = null;
         $outcome = '';
         $expectedData = ['data' => 'test'];
@@ -89,6 +96,7 @@ class HttpServerTest extends TestCase
         );
         $this->assertEquals(200, $status);
 
-        Process::kill($serverPid);
+        Process::kill($serverPid, SIGKILL);
+        sleep(3);
     }
 }

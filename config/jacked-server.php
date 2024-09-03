@@ -1,5 +1,6 @@
 <?php
 
+use Conveyor\Constants;
 use Monolog\Level;
 use OpenSwoole\Util;
 
@@ -57,10 +58,6 @@ return [
         // @phpstan-ignore-next-line
         // 'pid_file' => $_ENV['JACKED_SERVER_PID_FILE'] ?? ROOT_DIR . '/jacked-server.pid',
     ],
-    'conveyor-options' => [
-        'websocket-auth-token' => $_ENV['JACKED_SERVER_WEBSOCKET_AUTH_TOKEN'] ?? null,
-        'websocket-auth-url' => $_ENV['JACKED_SERVER_WEBSOCKET_AUTH_URL'] ?? null,
-    ],
 
     // ------------------------------------------------------------
     // Audit
@@ -103,21 +100,14 @@ return [
 
     'websocket' => [
         'enabled' => $_ENV['JACKED_SERVER_WEBSOCKET_ENABLED'] ?? false,
-        'allowed'
-    ],
 
-    // ------------------------------------------------------------
-    // Proxy
-    // ------------------------------------------------------------
+        // auth
+        'auth' => $_ENV['JACKED_SERVER_WEBSOCKET_AUTH'] ?? false,
+        'secret' => $_ENV['JACKED_SERVER_WEBSOCKET_SECRET'] ?? null,
+        'token' => $_ENV['JACKED_SERVER_WEBSOCKET_TOKEN'] ?? null,
 
-    'proxy' => [
-        'enabled' => $_ENV['JACKED_SERVER_PROXY_ENABLED'] ?? false,
-        'host' => $_ENV['JACKED_SERVER_PROXY_HOST'] ?? '127.0.0.1',
-        'port' => $_ENV['JACKED_SERVER_PROXY_PORT'] ?? 3000,
-        'allowed-headers' => [
-            'content-type',
-        ],
-        'timeout' => $_ENV['JACKED_SERVER_PROXY_TIMEOUT'] ?? 5,
+        // features
+        'acknowledgment' => $_ENV['JACKED_SERVER_WEBSOCKET_USE_ACKNOWLEDGMENT'] ?? false,
     ],
 
     // ------------------------------------------------------------
@@ -129,5 +119,18 @@ return [
         // JackedPhp\JackedServer\Events\RequestInterceptedEvent::class with the request and
         // response objects. e.g. /api/v1/intercepted,/api/v1/intercepted2
         'uris' => explode(',', $_ENV['JACKED_SERVER_REQUEST_INTERCEPTED_URIS'] ?? '') ?? [],
+    ],
+
+    // ------------------------------------------------------------
+    // Persistence
+    // ------------------------------------------------------------
+
+    'persistence' => [
+        'default' => $_ENV['JACKED_SERVER_PERSISTENCE_DRIVER'] ?? 'sqlite',
+        'connections' => [
+            'sqlite' => [
+                'database' => $_ENV['JACKED_SERVER_PERSISTENCE_SQLITE_DATABASE'] ?? ':memory:',
+            ],
+        ],
     ],
 ];

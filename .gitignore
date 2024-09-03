@@ -1,2 +1,5 @@
 .phpunit.result.cache
 vendor
+.env
+.idea
+jacked-server.pid
