@@ -350,7 +350,7 @@ class FastCgiClient
     /**
      * Read a FastCGI Packet
      *
-     * @return array
+     * @return array|false
      */
     private function readPacket()
     {

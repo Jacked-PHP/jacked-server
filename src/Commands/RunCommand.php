@@ -95,7 +95,7 @@ class RunCommand extends Command
             ->addOption(
                 name: self::OPTION_LOG_LEVEL,
                 mode: InputOption::VALUE_REQUIRED,
-                description: '(required) Log level. Default: 300 (warning). e.g. --logLevel=',
+                description: '(required) Log level. Default: 100 (warning). e.g. --logLevel=',
                 default: Config::get('log.level'),
             );
             // TODO: implement this option for websockets
