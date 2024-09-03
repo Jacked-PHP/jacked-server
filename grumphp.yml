@@ -6,6 +6,8 @@ grumphp:
         phpcs:
             standard:
                 - PSR12
+            exclude:
+                - tests/
         phpunit:
             testsuite: "Unit"
         shell:
