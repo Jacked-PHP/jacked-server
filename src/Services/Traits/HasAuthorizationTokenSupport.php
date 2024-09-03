@@ -30,7 +30,6 @@ trait HasAuthorizationTokenSupport
                         $event->request->server['request_uri'],
                     )
                     || $event->request->server['request_method'] !== 'POST'
-                    || !$this->websocketAuth
                     || !is_string($this->websocketSecret)
                 ) {
                     return;

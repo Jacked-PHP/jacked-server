@@ -148,7 +148,7 @@ class Server
      */
     private function executePreServerActions(): void
     {
-        if ($this->websocketEnabled) {
+        if ($this->websocketEnabled && $this->websocketAuth) {
             $this->activateWsAuth();
         }
 
