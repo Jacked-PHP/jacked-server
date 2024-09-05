@@ -12,9 +12,6 @@ const ROOT_DIR = __DIR__;
 const CONFIG_FILE = "/config/jacked-server.php";
 const MONITOR_CHANNEL = 'jacked-monitor';
 
-$dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
-$dotenv->load();
-
 $application = new Application;
 
 $application->add(new RunCommand('run'));

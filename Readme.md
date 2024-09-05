@@ -14,35 +14,64 @@ Install composer package:
 git clone https://github.com/Jacked-PHP/jacked-server.git
 ```
 
+Copy the `.env.example` to `.env`:
+
+```shell
+cp .env.example .env
+```
+
 Navigate to that folder and run it:
 
 ```shell
 ./jackit run
 ```
 
-This will display a Hello world in the browser at the location mentioned in the terminal (usually at the address http://localhost:8080).
+This will point to the local .env located at the root directory where jacked server is. The sample server simply displays a Hello world in the browser at the location mentioned in the terminal (usually at the address http://localhost:8080).
 
-To execute this server, serving a Laravel application, you can run:
+You can customize the `.env` there for your needs, or create another one and set the path to it in the `--config` option. 
+
+As an example, to execute this server, serving a Laravel application, you can point the server to the laravel directory through the `--config=` option:
 
 ```shell
-/jackit run --publicDocumentRoot=/var/www/my-laravel-app/public --documentRoot=/var/www/my-laravel-app/public
+/jackit run --config=/var/www/.env-pointing-to-laravel
 ```
 
 ---
 
 ## Parameters
 
-It accepts the following optional parameters:
+Check the `.env.example` file for start, but following you'll find a list of all the parameters that can be set in the `.env` file:
 
-- `--host`: Specifies the server host. Defaults to the configuration value.
-- `--port`: Specifies the server port. Defaults to the configuration value.
-- `--inputFile`: Specifies the input PHP file. Defaults to `public/index.php`.
-- `--documentRoot`: Specifies the document root directory where assets like js files, css or images will be served from. Defaults to `public`.
-- `--publicDocumentRoot`: Specifies the public document root directory. Defaults to `public`.
-- `--logPath`: Log file path. Defaults to `logs/jacked-server.log`.
-- `--logLevel`: Log level. Defaults to 100 (warning).
+- **JACKED_SERVER_INPUT_FILE:** The entry point of the server. e.g.: `/var/www/project/index.php`
+- **JACKED_SERVER_DOCUMENT_ROOT:** The document root of the server. e.g.: `/var/www/project`
+- **JACKED_SERVER_LOG_PATH:** The path to the log file. e.g.: `/var/www/project/logs/jacked-server.log`
+- **JACKED_SERVER_LOG_LEVEL:** The log level of the server. e.g.: `100` (DEBUG)
+- **JACKED_SERVER_FASTCGI_HOST:** The FastCGI host. e.g.: `unix:///run/php/php8.3-fpm.sock` (if it is a Unix socket) or `127.0.0.1` (if it is a TCP socket).
+- **JACKED_SERVER_FASTCGI_PORT:** The FastCGI port. e.g.: `9000` (if it is a TCP socket) or `-1` (if it is a Unix socket).
+- **JACKED_SERVER_WEBSOCKET_ENABLED:** Enable WebSocket. If enabled, [Socket Conveyor](https://socketconveyor.com) will be used to route WebSocket requests.
+- **JACKED_SERVER_HOST:** The host of the server. e.g.: `0.0.0.0`.
+- **JACKED_SERVER_PORT:** The port of the server. e.g.: `8080`.
+- **JACKED_SERVER_SERVER_TYPE:** The server type. e.g.: `2` (`OpenSwoole\Server::SIMPLE_MODE` - 1 - or `OpenSwoole\Server::POOL_MODE` - 2 -).
+- **JACKED_SERVER_TIMEOUT:** The timeout of the server. e.g.: `60`.
+- **JACKED_SERVER_READWRITE_TIMEOUT:** The read-write timeout of the server. e.g.: `60`.
+- **JACKED_SERVER_SSL_PORT:** The SSL port of the server. e.g.: `443`.
+- **JACKED_SERVER_SSL_ENABLED:** Enable SSL. e.g.: `false`.
+- **JACKED_SERVER_SSL_CERT_FILE:** The SSL certificate file. e.g.: `null`.
+- **JACKED_SERVER_SSL_KEY_FILE:** The SSL key file. e.g.: `null`.
+- **JACKED_SERVER_REACTOR_NUM:** The number of reactors. e.g.: `4`.
+- **JACKED_SERVER_WORKER_NUM:** The number of workers. e.g.: `4`.
+- **JACKED_SERVER_STATIC_ENABLED:** Enable static handler. e.g.: `true`.
+- **JACKED_SERVER_STATIC_LOCATIONS:** The static handler locations. e.g.: `/imgs,/css,/js,/build`.
+- **JACKED_SERVER_PID_FILE:** The PID file of the server. e.g.: `/var/www/project/jacked-server.pid`.
+- **JACKED_SERVER_AUDIT_ENABLED:** Enable audit. e.g.: `false`.
+- **JACKED_SERVER_WEBSOCKET_AUTH:** Enable WebSocket authorization. e.g.: `false`.
+- **JACKED_SERVER_WEBSOCKET_SECRET:** The WebSocket secret. e.g.: `null`.
+- **JACKED_SERVER_WEBSOCKET_TOKEN:** The WebSocket token. e.g.: `null` (or some difficult hash if auth is enabled).
+- **JACKED_SERVER_WEBSOCKET_USE_ACKNOWLEDGMENT:** Enable WebSocket acknowledgment. e.g.: `false`. Check the [Socket Conveyor documentation](https://socketconveyor.com) for more information.
+- **JACKED_SERVER_REQUEST_INTERCEPTED_URIS:** The URIs that will be intercepted by the Jacked Server. e.g.: `/api/v1/intercepted,/api/v1/intercepted2`.
+- **JACKED_SERVER_PERSISTENCE_DRIVER:** The persistence driver. e.g.: `sqlite` - the only currently supported persistence for now.
+- **JACKED_SERVER_PERSISTENCE_SQLITE_DATABASE:** The SQLite database. e.g.: `:memory:`.
 
-> More coming...
 
 ## Events
 
