@@ -40,7 +40,7 @@ class CompilePharCommand extends Command
             // start buffering. Mandatory to modify stub to add shebang
             $phar->startBuffering();
 
-            // Create the default stub from main.php entrypoint
+            // Create the default stub from jackit.php entrypoint
             $defaultStub = $phar->createDefaultStub('jackit');
 
             // Add the rest of the apps files
@@ -55,7 +55,7 @@ class CompilePharCommand extends Command
             $phar->stopBuffering();
 
             // plus - compressing it into gzip
-            $phar->compressFiles(Phar::GZ);
+            // $phar->compressFiles(Phar::GZ);
 
             # Make the file executable
             chmod($pharFile, 0770);
