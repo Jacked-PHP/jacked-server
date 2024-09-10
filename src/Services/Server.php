@@ -55,36 +55,74 @@ class Server
     use HasProperties;
 
     private LoggerInterface $logger;
+
     private string $logPrefix = 'JackedServer: ';
+
     private string $host = '0.0.0.0';
+
     private int $port = 8080;
-    private string $fastcgiHost = '127.0.0.1';
-    private int $fastcgiPort = 9000;
+
+    /**
+     * @var string FastCGI host. Default is "unix:///run/php/php-fpm.sock",
+     *             alternative is "127.0.0.1".
+     */
+    private string $fastcgiHost = 'unix:///run/php/php-fpm.sock';
+
+    /**
+     * @var int FastCGI port. Default is -1, alternative is 9000.
+     */
+    private int $fastcgiPort = -1;
+
     private string $serverProtocol = 'HTTP/1.1';
+
     private string $inputFile = '/index.php';
+
     private ?string $documentRoot = ROOT_DIR;
+
     private ?string $publicDocumentRoot = ROOT_DIR;
+
     private ?SymfonyStyle $output = null;
+
     private ?ServerPersistence $serverPersistence = null;
+
     private ?EventDispatcher $eventDispatcher = null;
+
     private bool $ssl = false;
+
     private bool $sslRedirect = true;
+
     private int $secondaryPort = 8080; // used for ssl cases
+
     private bool $websocketEnabled = false;
+
     private bool $websocketAcknowledgment = false;
+
     private bool $websocketAuth = false;
+
     private ?string $websocketToken = null;
+
     private ?string $websocketSecret = null;
+
     private array $requestInterceptorUris = [];
+
     private int $serverType = OpenSwooleBaseServer::POOL_MODE;
+
     private bool $auditEnabled = false;
+
     private int $timeout = 60;
+
     private int $readWriteTimeout = 60;
+
     private int $reactorNum = 4;
+
     private int $workerNum = 4;
+
     private ?string $logPath = null;
+
     private ?int $logLevel = null;
+
     private ?string $sslCertFile = null;
+
     private ?string $sslKeyFile = null;
 
     public static function init(): static

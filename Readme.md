@@ -6,6 +6,32 @@
 
 Jacked Server is a WebServer that support HTTP and WebSocket. Jacked Server is built with PHP/OpenSwoole. It doesn't only have the traditional approach for OpenSwoole servers: it also supports FastCGI (PHP-FPM)! That makes it more reliable when powering up your PHP applications that are not ready for a [Reactor Architecture](https://openswoole.com/how-it-works).
 
+## Quick Start
+
+> Run the following to prepare the sample laravel that we will serve (notice that you must have all the dependencies to run laravel):
+> ```shell
+> composer create-project --prefer-dist laravel/laravel /var/www/laravel
+> php artisan migrate
+> npm install
+> npm run dev
+> ```
+
+Let's jack that laravel app! First, download the Jacked Server binary:
+
+```shell
+# command placeholder
+```
+
+Move the downloaded binary to the directory that you want to serve the laravel app (or to your environment's `PATH`).
+
+> Notice that your project must be located in a directory that is accessible by the server (www-data user), usually within `/var/www`.
+
+Now you just need to run the server:
+
+```shell
+./jackit run
+```
+
 ## Installation
 
 Install composer package:
@@ -55,9 +81,9 @@ Check the `.env.example` file for start, but following you'll find a list of all
 - **JACKED_SERVER_TIMEOUT:** The timeout of the server. e.g.: `60`.
 - **JACKED_SERVER_READWRITE_TIMEOUT:** The read-write timeout of the server. e.g.: `60`.
 - **JACKED_SERVER_SSL_PORT:** The SSL port of the server. e.g.: `443`.
-- **JACKED_SERVER_SSL_ENABLED:** Enable SSL. e.g.: `false`.
-- **JACKED_SERVER_SSL_CERT_FILE:** The SSL certificate file. e.g.: `null`.
-- **JACKED_SERVER_SSL_KEY_FILE:** The SSL key file. e.g.: `null`.
+- **JACKED_SERVER_SSL_ENABLED:** Enable SSL. Accepts `true` or `false`.
+- **JACKED_SERVER_SSL_CERT_FILE:** The SSL certificate file. e.g.: `/path/to/ssl-cert`.
+- **JACKED_SERVER_SSL_KEY_FILE:** The SSL key file. e.g.: `/path/to/ssl-key`.
 - **JACKED_SERVER_REACTOR_NUM:** The number of reactors. e.g.: `4`.
 - **JACKED_SERVER_WORKER_NUM:** The number of workers. e.g.: `4`.
 - **JACKED_SERVER_STATIC_ENABLED:** Enable static handler. e.g.: `true`.
@@ -65,8 +91,8 @@ Check the `.env.example` file for start, but following you'll find a list of all
 - **JACKED_SERVER_PID_FILE:** The PID file of the server. e.g.: `/var/www/project/jacked-server.pid`.
 - **JACKED_SERVER_AUDIT_ENABLED:** Enable audit. e.g.: `false`.
 - **JACKED_SERVER_WEBSOCKET_AUTH:** Enable WebSocket authorization. e.g.: `false`.
-- **JACKED_SERVER_WEBSOCKET_SECRET:** The WebSocket secret. e.g.: `null`.
-- **JACKED_SERVER_WEBSOCKET_TOKEN:** The WebSocket token. e.g.: `null` (or some difficult hash if auth is enabled).
+- **JACKED_SERVER_WEBSOCKET_SECRET:** The WebSocket secret. e.g.: `my-super-secret`.
+- **JACKED_SERVER_WEBSOCKET_TOKEN:** The WebSocket token. e.g.: `my-token` (or some difficult hash if auth is enabled).
 - **JACKED_SERVER_WEBSOCKET_USE_ACKNOWLEDGMENT:** Enable WebSocket acknowledgment. e.g.: `false`. Check the [Socket Conveyor documentation](https://socketconveyor.com) for more information.
 - **JACKED_SERVER_REQUEST_INTERCEPTED_URIS:** The URIs that will be intercepted by the Jacked Server. e.g.: `/api/v1/intercepted,/api/v1/intercepted2`.
 - **JACKED_SERVER_PERSISTENCE_DRIVER:** The persistence driver. e.g.: `sqlite` - the only currently supported persistence for now.
@@ -97,7 +123,7 @@ With this set, you can follow the coordinates on how to interact with the WebSoc
 
 ### WebSocket Authorization
 
-To authorize with the WebSocket Server, you first need to get a token. This is done by sending an HTTP POST request to the server at the endpoint `/broadcasting/auth` with the following data:
+To authorize with the WebSocket Server, you first need to get a token. This is done by sending an HTTP POST request to the server at the endpoint `/broadcasting/auth`. Your request must be authorized with a Bearer token (with the following header: `Auhtorization: Bearer {token here})`. This bearer token is set at the `.env` `JACKED_SERVER_WEBSOCKET_TOKEN`. You must select the channel at the body of this request. The body has the following format:
 
 ```json
 {
@@ -107,6 +133,6 @@ To authorize with the WebSocket Server, you first need to get a token. This is d
 
 This body will define which channel this connection is authorized to connect to.
 
-Your request must be authorized with a Bearer token. This bearer token is set at the `.env` at this moment (`JACKED_SERVER_WEBSOCKET_TOKEN`). The server will respond with a JSON object containing the `auth` key. This token at the `auth` key is the token you need to use to connect to the WebSocket server.
+The server will respond with a JSON object containing the `auth` key. This token at the `auth` key is the token you need to use to connect to the WebSocket server.
 
 The token at the `auth` key in the response is a JWT token. This token is used to authenticate the WebSocket connection. The token is sent as a query parameter `token` when connecting to the WebSocket server. e.g.: `ws://127.0.0.1?token=your-token-here`. 

@@ -90,8 +90,8 @@ return [
     // ------------------------------------------------------------
 
     'fastcgi' => [
-        'host' => $_ENV['JACKED_SERVER_FASTCGI_HOST'] ?? '127.0.0.1',
-        'port' => $_ENV['JACKED_SERVER_FASTCGI_PORT'] ?? 9000,
+        'host' => $_ENV['JACKED_SERVER_FASTCGI_HOST'] ?? 'unix:///run/php/php-fpm.sock',
+        'port' => $_ENV['JACKED_SERVER_FASTCGI_PORT'] ?? -1,
     ],
 
     // ------------------------------------------------------------

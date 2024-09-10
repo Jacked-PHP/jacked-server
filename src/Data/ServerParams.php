@@ -17,6 +17,8 @@ readonly class ServerParams extends Bag
         public string $publicDocumentRoot,
         public string $logPath,
         public int $logLevel,
+        public string $fastcgiHost,
+        public int $fastcgiPort,
     ) {
     }
 
@@ -33,6 +35,8 @@ readonly class ServerParams extends Bag
             'publicDocumentRoot' => ['required', 'string'],
             'logPath' => ['required', 'string'],
             'logLevel' => ['required', 'integer'],
+            'fastcgiHost' => ['required', 'string'],
+            'fastcgiPort' => ['required', 'integer'],
         ];
     }
 }

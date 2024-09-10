@@ -23,14 +23,14 @@ trait HasProperties
         return $this;
     }
 
-    public function fastcgiHost(string $fastcgiHost = '127.0.0.1'): static
+    public function fastcgiHost(string $fastcgiHost = 'unix:///run/php/php-fpm.sock'): static
     {
         $this->fastcgiHost = $fastcgiHost;
 
         return $this;
     }
 
-    public function fastcgiPort(int $fastcgiPort = 9000): static
+    public function fastcgiPort(int $fastcgiPort = -1): static
     {
         $this->fastcgiPort = $fastcgiPort;
 

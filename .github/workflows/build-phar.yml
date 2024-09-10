@@ -2,9 +2,8 @@ name: Build PHAR
 
 on:
   push:
-    branches: [ v1-beta ]
-  pull_request:
-    branches: [ v1-beta ]
+    tags:
+      - 'v*'
 
 jobs:
   build:

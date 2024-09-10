@@ -55,7 +55,7 @@ class CompilePharCommand extends Command
             $phar->stopBuffering();
 
             // plus - compressing it into gzip
-            // $phar->compressFiles(Phar::GZ);
+            // $phar->compressFiles(Phar::GZ); // commented to avoid a known bug.
 
             # Make the file executable
             chmod($pharFile, 0770);

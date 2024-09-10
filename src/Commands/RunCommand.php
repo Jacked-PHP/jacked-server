@@ -14,7 +14,6 @@ use OpenSwoole\Coroutine;
 use OpenSwoole\Coroutine\System;
 use OpenSwoole\Process;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -81,6 +80,8 @@ class RunCommand extends Command
             'publicDocumentRoot' => Config::get('openswoole-server-settings.document_root'),
             'logPath' => Config::get('log.stream'),
             'logLevel' => Config::get('log.level'),
+            'fastcgiHost' => Config::get('fastcgi.host'),
+            'fastcgiPort' => Config::get('fastcgi.port'),
         ]);
 
         Server::init()
@@ -97,6 +98,8 @@ class RunCommand extends Command
             ))
             ->logPath($this->params->logPath)
             ->logLevel($this->params->logLevel)
+            ->fastcgiHost($this->params->fastcgiHost)
+            ->fastcgiPort($this->params->fastcgiPort)
             ->run();
 
         Coroutine::run(function () use ($io) {
