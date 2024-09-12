@@ -55,15 +55,17 @@ class RunCommand extends Command
                 name: self::OPTION_CONFIG,
                 mode: InputOption::VALUE_OPTIONAL,
                 description: '(required) Configuration file. Default is ".env".',
-                default: ROOT_DIR . '/.env',
+                default: null,
             );
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        $optionConfig = $input->getOption(self::OPTION_CONFIG);
+
         $dotenv = Dotenv::createImmutable(
-            paths: dirname($input->getOption(self::OPTION_CONFIG)),
-            names: basename($input->getOption(self::OPTION_CONFIG)),
+            paths: dirname($optionConfig ?? ROOT_DIR . '/.env'),
+            names: basename($optionConfig ?? ROOT_DIR . '/.env'),
         );
         $dotenv->load();
 
@@ -72,11 +74,21 @@ class RunCommand extends Command
 
         $io = new SymfonyStyle($input, $output);
 
+        $inputFile = Config::get('input-file');
+        if ($optionConfig === null) {
+            $inputFile = getcwd() . '/index.php';
+        }
+
+        $documentRoot = Config::get('openswoole-server-settings.document_root');
+        if ($optionConfig === null) {
+            $documentRoot = getcwd();
+        }
+
         $this->params = ServerParams::from([
             'host' => Config::get('host'),
             'port' => Config::get('port'),
-            'inputFile' => Config::get('input-file'),
-            'documentRoot' => Config::get('openswoole-server-settings.document_root'),
+            'inputFile' => $inputFile,
+            'documentRoot' => $documentRoot,
             'publicDocumentRoot' => Config::get('openswoole-server-settings.document_root'),
             'logPath' => Config::get('log.stream'),
             'logLevel' => Config::get('log.level'),
