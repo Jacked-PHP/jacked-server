@@ -33,16 +33,6 @@
         "jacked-php/lite-connect": "^0.0",
         "firebase/php-jwt": "^6.10"
     },
-    "extra": {
-        "laravel": {
-            "providers": [
-                "JackedPhp\\JackedServer\\JackedServerProvider"
-            ],
-            "aliases": {
-                "JackedServer": "JackedPhp\\JackedServer\\Facade"
-            }
-        }
-    },
     "require-dev": {
         "phpunit/phpunit": "^10.3",
         "openswoole/ide-helper": "^22.0",

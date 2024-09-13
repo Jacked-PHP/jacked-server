@@ -68,17 +68,17 @@ class RunCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $optionConfig = $input->getOption(self::OPTION_CONFIG);
+        $inputPath = current($input->getArgument(self::ARGUMENT_PATH));
+        $inputPath = empty($inputPath) ? null : $inputPath;
 
         $this->loadEnv($optionConfig);
 
         $this->applyPidFile();
 
-        $io = new SymfonyStyle($input, $output);
-
         [
             'inputFile' => $inputFile,
             'documentRoot' => $documentRoot,
-        ] = $this->processInputPath(current($input->getArgument(self::ARGUMENT_PATH)) ?? null);
+        ] = $this->processInputPath($inputPath);
 
         $this->params = ServerParams::from([
             'host' => Config::get('host'),
@@ -91,6 +91,8 @@ class RunCommand extends Command
             'fastcgiHost' => Config::get('fastcgi.host'),
             'fastcgiPort' => Config::get('fastcgi.port'),
         ]);
+
+        $io = new SymfonyStyle($input, $output);
 
         Server::init()
             ->host($this->params->host)
@@ -127,10 +129,14 @@ class RunCommand extends Command
         return Command::SUCCESS;
     }
 
+    /**
+     * @return array{inputFile: string, documentRoot: string}
+     */
     private function processInputPath(?string $inputPath = null): array
     {
         $documentRoot = null;
         $inputFile = null;
+
         if ($inputPath !== null) {
             $documentRoot = is_dir($inputPath) ? $inputPath : dirname($inputPath);
             $inputFile = is_dir($inputPath) ? $inputPath . '/index.php' : $inputPath;
@@ -149,9 +155,16 @@ class RunCommand extends Command
 
     private function loadEnv(?string $optionConfig = null): void
     {
+        $baseDirectory = $optionConfig ? dirname($optionConfig) : ROOT_DIR;
+        $envFile = $optionConfig ? basename($optionConfig) : '.env';
+
+        if (!file_exists($baseDirectory . '/' . $envFile)) {
+            return;
+        }
+
         $dotenv = Dotenv::createImmutable(
-            paths: dirname($optionConfig ?? ROOT_DIR . '/.env'),
-            names: basename($optionConfig ?? ROOT_DIR . '/.env'),
+            paths: $baseDirectory,
+            names: $envFile,
         );
         $dotenv->load();
     }
