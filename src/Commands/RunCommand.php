@@ -10,9 +10,6 @@ use JackedPhp\JackedServer\Helpers\Config;
 use JackedPhp\JackedServer\Services\Server;
 use JackedPhp\LiteConnect\SQLiteFactory;
 use OpenSwoole\Core\Coroutine\Pool\ClientPool;
-use OpenSwoole\Coroutine;
-use OpenSwoole\Coroutine\System;
-use OpenSwoole\Process;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputInterface;
@@ -35,6 +32,8 @@ class RunCommand extends Command
 
     protected ServerParams $params;
 
+    protected SymfonyStyle $io;
+
     /**
      * @var array{
      *     host: string,
@@ -49,6 +48,8 @@ class RunCommand extends Command
      * } $attributes
      */
     public array $attributes;
+
+    public string $userHomeDirectory;
 
     protected function configure(): void
     {
@@ -67,12 +68,23 @@ class RunCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        $this->io = new SymfonyStyle($input, $output);
+
+        $this->userHomeDirectory = getenv('HOME');
+        if (!$this->userHomeDirectory) {
+            $this->io->error("Unable to determine the home directory.");
+            return Command::FAILURE;
+        }
+
+        if (!$this->verifyDependencies()) {
+            return Command::FAILURE;
+        }
+
         $optionConfig = $input->getOption(self::OPTION_CONFIG);
         $inputPath = current($input->getArgument(self::ARGUMENT_PATH));
         $inputPath = empty($inputPath) ? null : $inputPath;
 
         $this->loadEnv($optionConfig);
-
         $this->applyPidFile();
 
         [
@@ -92,15 +104,13 @@ class RunCommand extends Command
             'fastcgiPort' => Config::get('fastcgi.port'),
         ]);
 
-        $io = new SymfonyStyle($input, $output);
-
         Server::init()
             ->host($this->params->host)
             ->port($this->params->port)
             ->inputFile($this->params->inputFile)
             ->documentRoot($this->params->documentRoot)
             ->publicDocumentRoot($this->params->publicDocumentRoot)
-            ->output($io)
+            ->output($this->io)
             ->eventDispatcher(new EventDispatcher())
             ->serverPersistence(new ServerPersistence(
                 connectionPool: $this->initializeDatabase(),
@@ -112,21 +122,17 @@ class RunCommand extends Command
             ->fastcgiPort($this->params->fastcgiPort)
             ->run();
 
-        Coroutine::run(function () use ($io) {
-            go(function () use ($io) {
-                System::waitSignal(SIGINT, -1);
-                $io->info('Server Terminated by User!');
-                Process::kill(getmypid(), SIGKILL);
-            });
-
-            go(function () use ($io) {
-                System::waitSignal(SIGKILL, -1);
-                $io->info('Server Terminated by Signal SIGKILL!');
-                Process::kill(getmypid(), SIGKILL);
-            });
-        });
-
         return Command::SUCCESS;
+    }
+
+    private function verifyDependencies(): bool
+    {
+        if (!extension_loaded('openswoole')) {
+            $this->io->error("OpenSwoole is available.");
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -169,7 +175,7 @@ class RunCommand extends Command
         $dotenv->load();
     }
 
-    protected function initializeDatabase(): ClientPool
+    private function initializeDatabase(): ClientPool
     {
         if (file_exists(Config::get('persistence.connections.' . Config::get('persistence.default') . '.database'))) {
             unlink(Config::get('persistence.connections.' . Config::get('persistence.default') . '.database'));
@@ -187,9 +193,9 @@ class RunCommand extends Command
         return $connectionPool;
     }
 
-    protected function applyPidFile(): void
+    private function applyPidFile(): void
     {
-        $pidFile = ROOT_DIR . '/jacked-server.pid';
+        $pidFile = $this->userHomeDirectory . '/jacked-server.pid';
         if (file_exists($pidFile)) {
             unlink($pidFile);
         }
