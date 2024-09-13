@@ -23,6 +23,8 @@ class RunCommand extends Command
 
     public const OPTION_CONFIG = 'config';
 
+    public const OPTION_DEBUG = 'debug';
+
     public const ARGUMENT_PATH = 'path';
 
     private ?string $name = 'run';
@@ -51,6 +53,8 @@ class RunCommand extends Command
 
     public string $userHomeDirectory;
 
+    public bool $debug;
+
     protected function configure(): void
     {
         $this
@@ -62,17 +66,23 @@ class RunCommand extends Command
             ->addOption(
                 name: self::OPTION_CONFIG,
                 mode: InputOption::VALUE_OPTIONAL,
-                description: '(required) Configuration file. Default is ".env".',
+                description: 'Configuration file. Default is ".env".',
+            )
+            ->addOption(
+                name: self::OPTION_DEBUG,
+                mode: InputOption::VALUE_NONE,
+                description: 'Displays debug information.',
             );
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $this->io = new SymfonyStyle($input, $output);
+        $this->debug = $input->getOption(self::OPTION_DEBUG);
 
-        $this->userHomeDirectory = getenv('HOME');
-        if (!$this->userHomeDirectory) {
-            $this->io->error("Unable to determine the home directory.");
+        $this->debug('Server initializing...');
+
+        if (!$this->setUserHomeDirectory()) {
             return Command::FAILURE;
         }
 
@@ -81,10 +91,14 @@ class RunCommand extends Command
         }
 
         $optionConfig = $input->getOption(self::OPTION_CONFIG);
+        $this->debug('Config set to: ' . $optionConfig);
+
         $inputPath = current($input->getArgument(self::ARGUMENT_PATH));
         $inputPath = empty($inputPath) ? null : $inputPath;
+        $this->debug('Input path set to: ' . $inputPath);
 
         $this->loadEnv($optionConfig);
+
         $this->applyPidFile();
 
         [
@@ -103,6 +117,8 @@ class RunCommand extends Command
             'fastcgiHost' => Config::get('fastcgi.host'),
             'fastcgiPort' => Config::get('fastcgi.port'),
         ]);
+
+        $this->debug('Server starting...');
 
         Server::init()
             ->host($this->params->host)
@@ -125,12 +141,41 @@ class RunCommand extends Command
         return Command::SUCCESS;
     }
 
+    private function debug(string $message): void
+    {
+        if (!$this->debug) {
+            return;
+        }
+
+        $this->io->block(
+            messages: $message,
+            type: 'DEBUG',
+            style: 'fg=white;bg=black',
+            padding: true,
+        );
+    }
+
+    private function setUserHomeDirectory(): bool
+    {
+        $this->userHomeDirectory = getenv('HOME');
+        if (!$this->userHomeDirectory) {
+            $this->io->error("Unable to determine the home directory.");
+            return false;
+        }
+
+        $this->debug('User home directory identified...');
+
+        return true;
+    }
+
     private function verifyDependencies(): bool
     {
         if (!extension_loaded('openswoole')) {
             $this->io->error("OpenSwoole is available.");
             return false;
         }
+
+        $this->debug('Dependencies verified...');
 
         return true;
     }
@@ -156,6 +201,9 @@ class RunCommand extends Command
             ?? Config::get('openswoole-server-settings.document_root')
             ?? getcwd();
 
+        $this->debug('Input file set to: ' . $inputFile);
+        $this->debug('Document Root set to: ' . $documentRoot);
+
         return ['inputFile' => $inputFile, 'documentRoot' => $documentRoot];
     }
 
@@ -165,6 +213,7 @@ class RunCommand extends Command
         $envFile = $optionConfig ? basename($optionConfig) : '.env';
 
         if (!file_exists($baseDirectory . '/' . $envFile)) {
+            $this->debug('Env config file doesn\'t exist: ' . $baseDirectory . '/' . $envFile);
             return;
         }
 
@@ -173,6 +222,7 @@ class RunCommand extends Command
             names: $envFile,
         );
         $dotenv->load();
+        $this->debug('Env config loaded.');
     }
 
     private function initializeDatabase(): ClientPool
@@ -200,5 +250,6 @@ class RunCommand extends Command
             unlink($pidFile);
         }
         file_put_contents($pidFile, getmypid());
+        $this->debug('Server PID set: ' . $pidFile);
     }
 }
