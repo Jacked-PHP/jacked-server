@@ -13,11 +13,15 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class CompilePharCommand extends Command
 {
+    private ?string $name = 'compile-phar';
+
+    protected static $defaultName = 'compile-phar';
+
+    protected static $defaultDescription = 'Compile phar file for this server.';
+
     protected function configure()
     {
-        $this->setName('compile')
-            ->setDescription('Generate phar file for this server.')
-            ->addArgument('output', InputArgument::REQUIRED, 'Output file (e.g.: convert.phar).');
+        $this->addArgument('output', InputArgument::REQUIRED, 'Output file (e.g.: convert.phar).');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
