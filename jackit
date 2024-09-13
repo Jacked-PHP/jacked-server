@@ -3,18 +3,16 @@
 
 require __DIR__.'/vendor/autoload.php';
 
-use JackedPhp\JackedServer\Commands\CompilePharCommand;
 use JackedPhp\JackedServer\Commands\RunCommand;
 use Symfony\Component\Console\Application;
 
 const ROOT_DIR = __DIR__;
-
 const CONFIG_FILE = "/config/jacked-server.php";
 const MONITOR_CHANNEL = 'jacked-monitor';
 
 $application = new Application;
 
 $application->add(new RunCommand('run'));
-$application->add(new CompilePharCommand('compile-phar'));
+$application->setDefaultCommand('run', true);
 
 $application->run();

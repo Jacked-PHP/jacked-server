@@ -16,21 +16,16 @@ Jacked Server is a WebServer that support HTTP and WebSocket. Jacked Server is b
 > npm run dev
 > ```
 
-Let's jack that laravel app! First, download the Jacked Server binary:
+Let's jack that laravel app! First, download the Jacked Server binary and run it:
 
 ```shell
 # command placeholder
+./jackit /path/to/laravel/public
 ```
 
-Move the downloaded binary to the directory that you want to serve the laravel app (or to your environment's `PATH`).
+> Note: you might need to be able to interact with php-fpm. This might involve running as root or www-data (`sudo -u www-data ./jackit /path/to/laravel/public`).
 
-> Notice that your project must be located in a directory that is accessible by the server (www-data user), usually within `/var/www`.
-
-Now you just need to run the server:
-
-```shell
-./jackit run
-```
+Now you access the laravel app at the address http://localhost:8080.
 
 ## Installation
 
@@ -49,17 +44,20 @@ cp .env.example .env
 Navigate to that folder and run it:
 
 ```shell
-./jackit run
+./jackit
 ```
 
 This will point to the local .env located at the root directory where jacked server is. The sample server simply displays a Hello world in the browser at the location mentioned in the terminal (usually at the address http://localhost:8080).
 
 You can customize the `.env` there for your needs, or create another one and set the path to it in the `--config` option. 
 
-As an example, to execute this server, serving a Laravel application, you can point the server to the laravel directory through the `--config=` option:
+As an example, to execute this server, serving a Laravel application, you can point the server to the laravel directory or point to a configuration file that does so. The config is the option `--config=`:
 
-```shell
-/jackit run --config=/var/www/.env-pointing-to-laravel
+```shell  
+# point to the laravel directory
+./jackit /path/to/laravel/public
+# with the option:
+/jackit --config=/var/www/.env-pointing-to-laravel
 ```
 
 ---

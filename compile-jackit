@@ -1,0 +1,16 @@
+#!/usr/bin/env php
+<?php
+
+require __DIR__.'/vendor/autoload.php';
+
+use JackedPhp\JackedServer\Commands\CompilePharCommand;
+use Symfony\Component\Console\Application;
+
+const ROOT_DIR = __DIR__;
+
+$application = new Application;
+
+$application->add(new CompilePharCommand('compile-phar'));
+$application->setDefaultCommand('compile-phar', true);
+
+$application->run();

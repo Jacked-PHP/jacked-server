@@ -26,6 +26,8 @@ class RunCommand extends Command
 
     public const OPTION_CONFIG = 'config';
 
+    public const ARGUMENT_PATH = 'path';
+
     private ?string $name = 'run';
     protected static $defaultName = 'run';
 
@@ -51,11 +53,15 @@ class RunCommand extends Command
     protected function configure(): void
     {
         $this
+            ->addArgument(
+                name: self::ARGUMENT_PATH,
+                mode: InputOption::VALUE_OPTIONAL,
+                description: 'Path to the configuration file.',
+            )
             ->addOption(
                 name: self::OPTION_CONFIG,
                 mode: InputOption::VALUE_OPTIONAL,
                 description: '(required) Configuration file. Default is ".env".',
-                default: null,
             );
     }
 
@@ -63,26 +69,16 @@ class RunCommand extends Command
     {
         $optionConfig = $input->getOption(self::OPTION_CONFIG);
 
-        $dotenv = Dotenv::createImmutable(
-            paths: dirname($optionConfig ?? ROOT_DIR . '/.env'),
-            names: basename($optionConfig ?? ROOT_DIR . '/.env'),
-        );
-        $dotenv->load();
+        $this->loadEnv($optionConfig);
 
         $this->applyPidFile();
-        $connectionPool = $this->initializeDatabase();
 
         $io = new SymfonyStyle($input, $output);
 
-        $inputFile = Config::get('input-file');
-        if ($optionConfig === null) {
-            $inputFile = getcwd() . '/index.php';
-        }
-
-        $documentRoot = Config::get('openswoole-server-settings.document_root');
-        if ($optionConfig === null) {
-            $documentRoot = getcwd();
-        }
+        [
+            'inputFile' => $inputFile,
+            'documentRoot' => $documentRoot,
+        ] = $this->processInputPath(current($input->getArgument(self::ARGUMENT_PATH)) ?? null);
 
         $this->params = ServerParams::from([
             'host' => Config::get('host'),
@@ -105,7 +101,7 @@ class RunCommand extends Command
             ->output($io)
             ->eventDispatcher(new EventDispatcher())
             ->serverPersistence(new ServerPersistence(
-                connectionPool: $connectionPool,
+                connectionPool: $this->initializeDatabase(),
                 conveyorPersistence: [],
             ))
             ->logPath($this->params->logPath)
@@ -129,6 +125,35 @@ class RunCommand extends Command
         });
 
         return Command::SUCCESS;
+    }
+
+    private function processInputPath(?string $inputPath = null): array
+    {
+        $documentRoot = null;
+        $inputFile = null;
+        if ($inputPath !== null) {
+            $documentRoot = is_dir($inputPath) ? $inputPath : dirname($inputPath);
+            $inputFile = is_dir($inputPath) ? $inputPath . '/index.php' : $inputPath;
+        }
+
+        $inputFile = $inputFile
+            ?? Config::get('input-file')
+            ?? getcwd() . '/index.php';
+
+        $documentRoot = $documentRoot
+            ?? Config::get('openswoole-server-settings.document_root')
+            ?? getcwd();
+
+        return ['inputFile' => $inputFile, 'documentRoot' => $documentRoot];
+    }
+
+    private function loadEnv(?string $optionConfig = null): void
+    {
+        $dotenv = Dotenv::createImmutable(
+            paths: dirname($optionConfig ?? ROOT_DIR . '/.env'),
+            names: basename($optionConfig ?? ROOT_DIR . '/.env'),
+        );
+        $dotenv->load();
     }
 
     protected function initializeDatabase(): ClientPool
