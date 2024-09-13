@@ -3,6 +3,7 @@
 namespace JackedPhp\JackedServer\Commands;
 
 use Dotenv\Dotenv;
+use Exception;
 use JackedPhp\JackedServer\Commands\Traits\HasPersistence;
 use JackedPhp\JackedServer\Data\ServerParams;
 use JackedPhp\JackedServer\Data\ServerPersistence;
@@ -101,22 +102,7 @@ class RunCommand extends Command
 
         $this->applyPidFile();
 
-        [
-            'inputFile' => $inputFile,
-            'documentRoot' => $documentRoot,
-        ] = $this->processInputPath($inputPath);
-
-        $this->params = ServerParams::from([
-            'host' => Config::get('host'),
-            'port' => Config::get('port'),
-            'inputFile' => $inputFile,
-            'documentRoot' => $documentRoot,
-            'publicDocumentRoot' => Config::get('openswoole-server-settings.document_root'),
-            'logPath' => Config::get('log.stream'),
-            'logLevel' => Config::get('log.level'),
-            'fastcgiHost' => Config::get('fastcgi.host'),
-            'fastcgiPort' => Config::get('fastcgi.port'),
-        ]);
+        $this->params = $this->prepareServerParams($inputPath);
 
         $this->debug('Server starting...');
 
@@ -166,6 +152,38 @@ class RunCommand extends Command
         $this->debug('User home directory identified...');
 
         return true;
+    }
+
+    private function prepareServerParams(?string $inputPath): ServerParams|false
+    {
+        [
+            'inputFile' => $inputFile,
+            'documentRoot' => $documentRoot,
+        ] = $this->processInputPath($inputPath);
+
+        $data = [
+            'host' => Config::get('host'),
+            'port' => Config::get('port'),
+            'inputFile' => $inputFile,
+            'documentRoot' => $documentRoot,
+            'publicDocumentRoot' => Config::get('openswoole-server-settings.document_root'),
+            'logPath' => Config::get('log.stream'),
+            'logLevel' => Config::get('log.level'),
+            'fastcgiHost' => Config::get('fastcgi.host'),
+            'fastcgiPort' => Config::get('fastcgi.port'),
+        ];
+
+        try {
+            $serverParams = ServerParams::from($data);
+        } catch (Exception $e) {
+            $this->io->error($e->getMessage());
+            $this->debug('Server params failed to initialize');
+            $this->debug('Error: ' . $e->getMessage());
+            $this->debug('Data: ' . json_encode($data));
+            exit(Command::FAILURE);
+        }
+
+        return $serverParams;
     }
 
     private function verifyDependencies(): bool
