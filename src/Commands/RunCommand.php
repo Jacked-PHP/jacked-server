@@ -127,7 +127,7 @@ class RunCommand extends Command
         return Command::SUCCESS;
     }
 
-    private function debug(string $message): void
+    private function debug(string|iterable $message): void
     {
         if (!$this->debug) {
             return;
@@ -163,23 +163,32 @@ class RunCommand extends Command
 
         $data = [
             'host' => Config::get('host'),
-            'port' => Config::get('port'),
+            'port' => (int) Config::get('port'),
             'inputFile' => $inputFile,
             'documentRoot' => $documentRoot,
             'publicDocumentRoot' => Config::get('openswoole-server-settings.document_root'),
             'logPath' => Config::get('log.stream'),
-            'logLevel' => Config::get('log.level'),
+            'logLevel' => (int) Config::get('log.level'),
             'fastcgiHost' => Config::get('fastcgi.host'),
-            'fastcgiPort' => Config::get('fastcgi.port'),
+            'fastcgiPort' => (int) Config::get('fastcgi.port'),
         ];
 
         try {
+            $this->debug([
+                'Initializing Server params:',
+                'Host: ' . $data['host'],
+                'Port: ' . $data['port'],
+                'Input File: ' . $data['inputFile'],
+                'Document Root: ' . $data['documentRoot'],
+                'Public Document Root: ' . $data['publicDocumentRoot'],
+                'Log Path: ' . $data['logPath'],
+                'Log Level: ' . $data['logLevel'],
+                'FastCGI Host: ' . $data['fastcgiHost'],
+                'FastCGI Port: ' . $data['fastcgiPort'],
+            ]);
             $serverParams = ServerParams::from($data);
         } catch (Exception $e) {
             $this->io->error($e->getMessage());
-            $this->debug('Server params failed to initialize');
-            $this->debug('Error: ' . $e->getMessage());
-            $this->debug('Data: ' . json_encode($data));
             exit(Command::FAILURE);
         }
 
