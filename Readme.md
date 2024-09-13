@@ -19,8 +19,8 @@ Jacked Server is a WebServer that support HTTP and WebSocket. Jacked Server is b
 Let's jack that laravel app! First, download the Jacked Server binary and run it:
 
 ```shell
-# command placeholder
-./jackit /path/to/laravel/public
+wget https://github.com/Jacked-PHP/jacked-server/releases/download/v1.0.3-beta/jackit.phar
+./jackit.phar /path/to/laravel/public
 ```
 
 > Note: you might need to be able to interact with php-fpm. This might involve running as root or www-data (`sudo -u www-data ./jackit /path/to/laravel/public`).
