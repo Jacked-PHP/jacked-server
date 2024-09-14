@@ -20,10 +20,11 @@ Let's jack that laravel app! First, download the Jacked Server binary and run it
 
 ```shell
 wget https://github.com/Jacked-PHP/jacked-server/releases/download/v1.0.3-beta/jackit.phar
+sudo chmod +x jackit.phar
 ./jackit.phar /path/to/laravel/public
 ```
 
-> Note: you might need to be able to interact with php-fpm. This might involve running as root or www-data (`sudo -u www-data ./jackit /path/to/laravel/public`).
+> Note: you might need to be able to interact with php-fpm. This might involve running as root or www-data (`sudo -u www-data ./jackit /path/to/laravel/public`) and from a directory accessible by www-data users (`/var/www`).
 
 Now you access the laravel app at the address http://localhost:8080.
 
