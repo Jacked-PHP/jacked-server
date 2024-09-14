@@ -9,7 +9,7 @@ class Config
     public static function get(
         string $key,
         mixed $default = null,
-        string $configFile = ROOT_DIR . CONFIG_FILE,
+        string $configFile = CONFIG_FILE,
     ): mixed {
         $configData = require($configFile);
 

@@ -74,7 +74,7 @@ return [
     'log' => [
         // @phpstan-ignore-next-line
         'stream' => $_ENV['JACKED_SERVER_LOG_PATH'] ?? ROOT_DIR . '/logs/jacked-server.log',
-        'level' => $_ENV['JACKED_SERVER_LOG_LEVEL'] ?? Level::Warning,
+        'level' => $_ENV['JACKED_SERVER_LOG_LEVEL'] ?? Level::Warning->value,
     ],
 
     // ------------------------------------------------------------

@@ -166,7 +166,7 @@ class RunCommand extends Command
             'port' => (int) Config::get('port'),
             'inputFile' => $inputFile,
             'documentRoot' => $documentRoot,
-            'publicDocumentRoot' => Config::get('openswoole-server-settings.document_root'),
+            'publicDocumentRoot' => $documentRoot,
             'logPath' => Config::get('log.stream'),
             'logLevel' => (int) Config::get('log.level'),
             'fastcgiHost' => Config::get('fastcgi.host'),

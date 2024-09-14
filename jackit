@@ -6,8 +6,9 @@ require __DIR__.'/vendor/autoload.php';
 use JackedPhp\JackedServer\Commands\RunCommand;
 use Symfony\Component\Console\Application;
 
-const ROOT_DIR = __DIR__;
-const CONFIG_FILE = "/config/jacked-server.php";
+define('IS_PHAR', str_starts_with(__DIR__, 'phar:///'));
+define('ROOT_DIR', IS_PHAR ? getcwd() : __DIR__);
+define('CONFIG_FILE',  __DIR__ . '/config/jacked-server.php');
 const MONITOR_CHANNEL = 'jacked-monitor';
 
 $application = new Application;
