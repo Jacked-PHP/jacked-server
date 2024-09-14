@@ -156,6 +156,16 @@ trait HttpSupport
                 'requestOptions' => $requestOptions,
                 'content' => $content,
             ]);
+
+            if (
+                IS_PHAR
+                && !file_exists(Arr::get($requestOptions, 'SCRIPT_FILENAME'))
+                && Arr::get($requestOptions, 'REQUEST_URI') === '/'
+            ) {
+                $response->write('<div style="width: 100%; text-align: center;">-- Jacked Server --</div>');
+                goto end_of_try;
+            }
+
             $this->logger->info($this->logPrefix . 'Request Time: {time}', [
                 'time' => Carbon::now()->format('Y-m-d H:i:s'),
             ]);
@@ -169,6 +179,8 @@ trait HttpSupport
             $result = $client->requestStream($requestOptions, $content, function ($data) use ($response) {
                 $response->write($data);
             });
+
+            end_of_try:
         } catch (Exception $e) {
             $error = $e->getMessage();
 

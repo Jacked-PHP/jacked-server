@@ -28,8 +28,8 @@ class CompilePharCommand extends Command
     {
         try {
             $pharFile = $input->getArgument('output');
+            // $excludeDirs = ['tests', 'logs', 'docs'];
 
-            // clean up
             if (file_exists($pharFile)) {
                 unlink($pharFile);
             }
@@ -38,30 +38,15 @@ class CompilePharCommand extends Command
                 unlink($pharFile . '.gz');
             }
 
-            // create phar
             $phar = new Phar($pharFile);
-
-            // start buffering. Mandatory to modify stub to add shebang
             $phar->startBuffering();
-
-            // Create the default stub from jackit.php entrypoint
-            $defaultStub = $phar->createDefaultStub('jackit');
-
-            // Add the rest of the apps files
             $phar->buildFromDirectory(ROOT_DIR); // @phpstan-ignore-line
-
-            // Customize the stub to add the shebang
+            $defaultStub = $phar->createDefaultStub('jackit');
             $stub = "#!/usr/bin/env php \n" . $defaultStub;
-
-            // Add the stub
             $phar->setStub($stub);
-
             $phar->stopBuffering();
-
-            // plus - compressing it into gzip
             // $phar->compressFiles(Phar::GZ); // commented to avoid a known bug.
 
-            # Make the file executable
             chmod($pharFile, 0770);
 
             $output->writeln('<info>' . $pharFile . ' successfully created</info>');

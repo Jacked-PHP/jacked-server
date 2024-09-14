@@ -8,7 +8,8 @@ use Symfony\Component\Console\Application;
 
 define('IS_PHAR', str_starts_with(__DIR__, 'phar:///'));
 define('ROOT_DIR', IS_PHAR ? getcwd() : __DIR__);
-define('CONFIG_FILE',  __DIR__ . '/config/jacked-server.php');
+
+const CONFIG_FILE = __DIR__ . '/config/jacked-server.php';
 const MONITOR_CHANNEL = 'jacked-monitor';
 
 $application = new Application;
