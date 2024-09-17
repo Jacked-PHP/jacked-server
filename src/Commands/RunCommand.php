@@ -122,12 +122,13 @@ class RunCommand extends Command
             ->logLevel($this->params->logLevel)
             ->fastcgiHost($this->params->fastcgiHost)
             ->fastcgiPort($this->params->fastcgiPort)
+            ->debug($this->debug)
             ->run();
 
         return Command::SUCCESS;
     }
 
-    private function debug(string|iterable $message): void
+    protected function debug(string|iterable $message): void
     {
         if (!$this->debug) {
             return;

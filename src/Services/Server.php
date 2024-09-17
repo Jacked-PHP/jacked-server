@@ -26,6 +26,7 @@ use JackedPhp\JackedServer\Exceptions\RedirectException;
 use JackedPhp\JackedServer\Helpers\Config;
 use JackedPhp\JackedServer\Services\Logger\EchoHandler;
 use JackedPhp\JackedServer\Services\Response as JackedResponse;
+use JackedPhp\JackedServer\Services\Traits\Debuggable;
 use JackedPhp\JackedServer\Services\Traits\HasMonitor;
 use JackedPhp\JackedServer\Services\Traits\HasProperties;
 use JackedPhp\JackedServer\Services\Traits\HttpSupport;
@@ -53,6 +54,7 @@ class Server
     use HasAuthorizationTokenSupport;
     use HasMonitor;
     use HasProperties;
+    use Debuggable;
 
     private LoggerInterface $logger;
 
@@ -124,6 +126,8 @@ class Server
     private ?string $sslCertFile = null;
 
     private ?string $sslKeyFile = null;
+
+    private bool $debug = false;
 
     public static function init(): static
     {

@@ -10,6 +10,7 @@ use JackedPhp\JackedServer\Events\JackedRequestReceived;
 use JackedPhp\JackedServer\Exceptions\RedirectException;
 use JackedPhp\JackedServer\Services\FastCgiClient;
 use JackedPhp\JackedServer\Services\Response as JackedResponse;
+use Monolog\Level;
 use OpenSwoole\Http\Request;
 use OpenSwoole\Coroutine\Http\Client as CoroutineHttpClient;
 use OpenSwoole\Http\Response;
@@ -109,12 +110,12 @@ trait HttpSupport
         int $port,
         array $allowedHeaders,
     ): void {
-        $this->logger->info($this->logPrefix . 'Proxy Request: {requestInfo}', [
+        $this->report($this->logPrefix . 'Proxy Request: {pathInfo}', context: [
             'pathInfo' => $request->server['path_info'] ?? '',
             'requestOptions' => $request->server,
             'content' => $request->rawContent(),
-        ]);
-        $this->logger->info($this->logPrefix . 'Request Time: {time}', [
+        ], skipPrint: true);
+        $this->report($this->logPrefix . 'Request Time: {time}', context: [
             'time' => Carbon::now()->format('Y-m-d H:i:s'),
         ]);
 
@@ -151,10 +152,15 @@ trait HttpSupport
         $startMemory = memory_get_usage();
 
         try {
-            $this->logger->info($this->logPrefix . 'Request: {requestInfo}', [
+            $this->report($this->logPrefix . 'Request: {requestMethod} {pathInfo}', context: [
+                'requestMethod' => Arr::get($requestOptions, 'REQUEST_METHOD'),
                 'pathInfo' => Arr::get($requestOptions, 'PATH_INFO'),
                 'requestOptions' => $requestOptions,
                 'content' => $content,
+            ], skipPrint: true);
+
+            $this->report($this->logPrefix . 'Request Time: {time}', context: [
+                'time' => Carbon::now()->format('Y-m-d H:i:s'),
             ]);
 
             if (
@@ -162,13 +168,13 @@ trait HttpSupport
                 && !file_exists(Arr::get($requestOptions, 'SCRIPT_FILENAME'))
                 && Arr::get($requestOptions, 'REQUEST_URI') === '/'
             ) {
+                $this->report($this->logPrefix . 'No handler beyond Jacked Server.', context: [
+                    'time' => Carbon::now()->format('Y-m-d H:i:s'),
+                ]);
                 $response->write('<div style="width: 100%; text-align: center;">-- Jacked Server --</div>');
                 goto end_of_try;
             }
 
-            $this->logger->info($this->logPrefix . 'Request Time: {time}', [
-                'time' => Carbon::now()->format('Y-m-d H:i:s'),
-            ]);
             $client = new FastCgiClient(
                 host: $this->fastcgiHost,
                 port: $this->fastcgiPort,
@@ -182,27 +188,18 @@ trait HttpSupport
 
             end_of_try:
         } catch (Exception $e) {
-            $error = $e->getMessage();
-
-            if ($this->output instanceof OutputStyle) {
-                $this->output->error('Jacked Server Error: ' . $error);
-            } else {
-                echo 'Jacked Server Error: ' . $error . PHP_EOL;
-            }
-
-            $this->logger->info($this->logPrefix . 'Request Error: {errorMessage}', [
-                'errorMessage' => $error,
-            ]);
+            $this->report($this->logPrefix . 'Jacked Server Error: ' . $e->getMessage(),
+                level: Level::Error);
         }
 
         $endTime = microtime(true);
         $endMemory = memory_get_usage();
         $timeTaken = $endTime - $startTime;
         $memoryUsed = $endMemory - $startMemory;
-        $this->logger->info($this->logPrefix . 'Request Time taken: {timeTaken}', [
+        $this->report($this->logPrefix . 'Request Time taken: {timeTaken}', context: [
             'timeTaken' => round($timeTaken, 5) . ' seconds',
         ]);
-        $this->logger->info($this->logPrefix . 'Request Memory used: {memoryUsed}', [
+        $this->report($this->logPrefix . 'Request Memory used: {memoryUsed}', context: [
             'memoryUsed' => number_format($memoryUsed) . ' bytes',
         ]);
 
@@ -234,13 +231,13 @@ trait HttpSupport
         array $cookies,
         int $contentLength,
     ): array {
-        $this->logger->debug($this->logPrefix . ' Debug: prepare request options', [
+        $this->report($this->logPrefix . 'Debug: prepare request options', context: [
             'method' => $method,
             'serverInfo' => $serverInfo,
             'header' => $header,
             'cookies' => $cookies,
             'contentLength' => $contentLength,
-        ]);
+        ], level: Level::Debug);
 
         $requestOptions = [];
         $this->addServerInfo($requestOptions, $serverInfo);

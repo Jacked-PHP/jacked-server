@@ -222,4 +222,11 @@ trait HasProperties
 
         return $this;
     }
+
+    public function debug(bool $debug): static
+    {
+        $this->debug = $debug;
+
+        return $this;
+    }
 }
