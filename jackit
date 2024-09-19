@@ -4,6 +4,7 @@
 require __DIR__.'/vendor/autoload.php';
 
 use JackedPhp\JackedServer\Commands\RunCommand;
+use JackedPhp\JackedServer\Services\Server;
 use Symfony\Component\Console\Application;
 
 define('IS_PHAR', str_starts_with(__DIR__, 'phar:///'));
@@ -14,7 +15,7 @@ const MONITOR_CHANNEL = 'jacked-monitor';
 
 $application = new Application;
 
-$application->add(new RunCommand('run'));
+$application->add(new RunCommand(Server::init()));
 $application->setDefaultCommand('run', true);
 
 $application->run();

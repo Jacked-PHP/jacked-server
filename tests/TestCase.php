@@ -15,8 +15,9 @@ class TestCase extends BaseTestCase
     public function setUp(): void
     {
         define('ROOT_DIR', __DIR__ . '/Sample');
-        define('CONFIG_FILE', '/config/jacked-server.php');
+        define('CONFIG_FILE', ROOT_DIR . '/config/jacked-server.php');
         define('MONITOR_CHANNEL', 'jacked-monitor');
+        define('IS_PHAR', false);
 
         $dotenv = Dotenv::createImmutable(ROOT_DIR);
         $dotenv->load();

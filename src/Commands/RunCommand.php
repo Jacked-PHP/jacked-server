@@ -28,10 +28,11 @@ class RunCommand extends Command
 
     public const ARGUMENT_PATH = 'path';
 
-    private ?string $name = 'run';
-    protected static $defaultName = 'run';
+    private string $name = 'run';
 
     protected static $defaultDescription = 'JackedPHP OpenSwoole Server';
+
+    protected Server $server;
 
     protected ServerParams $params;
 
@@ -55,6 +56,12 @@ class RunCommand extends Command
     public string $userHomeDirectory;
 
     public bool $debug;
+
+    public function __construct(Server $server)
+    {
+        parent::__construct($this->name);
+        $this->server = $server;
+    }
 
     protected function configure(): void
     {
@@ -80,16 +87,10 @@ class RunCommand extends Command
     {
         $this->io = new SymfonyStyle($input, $output);
         $this->debug = $input->getOption(self::OPTION_DEBUG);
-
         $this->debug('Server initializing...');
 
-        if (!$this->setUserHomeDirectory()) {
-            return Command::FAILURE;
-        }
-
-        if (!$this->verifyDependencies()) {
-            return Command::FAILURE;
-        }
+        $this->setUserHomeDirectory();
+        $this->verifyDependencies();
 
         $optionConfig = $input->getOption(self::OPTION_CONFIG);
         $this->debug('Config set to: ' . $optionConfig);
@@ -106,7 +107,7 @@ class RunCommand extends Command
 
         $this->debug('Server starting...');
 
-        Server::init()
+        $this->server
             ->host($this->params->host)
             ->port($this->params->port)
             ->inputFile($this->params->inputFile)
@@ -142,17 +143,15 @@ class RunCommand extends Command
         );
     }
 
-    private function setUserHomeDirectory(): bool
+    private function setUserHomeDirectory(): void
     {
         $this->userHomeDirectory = getenv('HOME');
         if (!$this->userHomeDirectory) {
             $this->io->error("Unable to determine the home directory.");
-            return false;
+            exit(Command::FAILURE);
         }
 
         $this->debug('User home directory identified...');
-
-        return true;
     }
 
     private function prepareServerParams(?string $inputPath): ServerParams|false
@@ -196,16 +195,14 @@ class RunCommand extends Command
         return $serverParams;
     }
 
-    private function verifyDependencies(): bool
+    private function verifyDependencies(): void
     {
         if (!extension_loaded('openswoole')) {
             $this->io->error("OpenSwoole is available.");
-            return false;
+            exit(Command::FAILURE);
         }
 
         $this->debug('Dependencies verified...');
-
-        return true;
     }
 
     /**
