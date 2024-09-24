@@ -6,8 +6,10 @@ use Carbon\Carbon;
 use Conveyor\Helpers\Arr;
 use Exception;
 use Hook\Filter;
+use JackedPhp\JackedServer\Constants;
 use JackedPhp\JackedServer\Events\JackedRequestReceived;
 use JackedPhp\JackedServer\Exceptions\RedirectException;
+use JackedPhp\JackedServer\Helpers\Debug;
 use JackedPhp\JackedServer\Services\FastCgiClient;
 use JackedPhp\JackedServer\Services\Response as JackedResponse;
 use Monolog\Level;
@@ -246,20 +248,44 @@ trait HttpSupport
 
         $requestUri = Arr::get($serverInfo, 'request_uri', '');
 
-        return array_change_key_case(array_filter(array_merge($requestOptions, [
-            'path_info' => $this->getPathInfo($serverInfo),
-            'document_root' => $this->getDocumentRoot(''),
-            'request_method' => $method,
-            'script_name' => $this->getScriptName($requestUri),
-            'script_filename' => $this->getScriptFilename($requestUri),
-            'content_length' => $contentLength,
-            'server_protocol' => Arr::get(
-                $serverInfo,
-                'server_protocol',
-                $this->serverProtocol,
-            ),
-            'server_name' => Arr::get($requestOptions, 'http_host'),
-        ])), CASE_UPPER);
+        return array_change_key_case(array_filter(array_merge(
+            $requestOptions,
+            $this->getProjectLocation(header: $header, serverInfo: $serverInfo, requestUri: $requestUri),
+            [
+                'request_method' => $method,
+                'content_length' => $contentLength,
+                'server_protocol' => Arr::get(
+                    $serverInfo,
+                    'server_protocol',
+                    $this->serverProtocol,
+                ),
+                'server_name' => Arr::get($requestOptions, 'http_host'),
+            ],
+        )), CASE_UPPER);
+    }
+
+    private function getProjectLocation(array $header, array $serverInfo, string $requestUri): array
+    {
+        $route = Filter::applyFilters(
+            Constants::ROUTING_FILTER,
+            [
+                'path_info' => $this->getPathInfo($serverInfo),
+                'document_root' => $this->getDocumentRoot(''),
+                'script_name' => $this->getScriptName($requestUri),
+                'script_filename' => $this->getScriptFilename($requestUri),
+            ],
+            $header,
+        );
+
+        if ($this->debug) {
+            $this->report(
+                message: $this->logPrefix . "Debug: routing info: \n\n" . Debug::dumpIo($route),
+                context: $route,
+                level: Level::Debug,
+            );
+        }
+
+        return $route;
     }
 
     private function getScriptFilename(string $requestUri): string

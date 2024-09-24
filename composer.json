@@ -17,6 +17,7 @@
         "php": ">=8.2",
         "ext-openswoole": "22.*",
         "ext-pcntl": "*",
+        "ext-curl": "*",
         "adoy/fastcgi-client": "^1.0",
         "guzzlehttp/guzzle": "^7.7",
         "kanata-php/socket-conveyor": "^2.2",

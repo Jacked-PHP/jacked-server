@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "7ee8600bebaaf2707c6d8caad070e984",
+    "content-hash": "ac65718b6ec548d18bd583177a1256b3",
     "packages": [
         {
             "name": "adoy/fastcgi-client",
@@ -9133,7 +9133,8 @@
     "platform": {
         "php": ">=8.2",
         "ext-openswoole": "22.*",
-        "ext-pcntl": "*"
+        "ext-pcntl": "*",
+        "ext-curl": "*"
     },
     "platform-dev": [],
     "plugin-api-version": "2.6.0"

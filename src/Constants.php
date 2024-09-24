@@ -11,4 +11,6 @@ class Constants
     // Filters
 
     public const INTERCEPT_REQUEST = 'js-filter.jacked_intercept_requests';
+
+    public const ROUTING_FILTER = 'js-filter.jacked_routing_filter';
 }

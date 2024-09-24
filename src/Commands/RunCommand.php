@@ -8,6 +8,7 @@ use JackedPhp\JackedServer\Commands\Traits\HasPersistence;
 use JackedPhp\JackedServer\Data\ServerParams;
 use JackedPhp\JackedServer\Data\ServerPersistence;
 use JackedPhp\JackedServer\Helpers\Config;
+use JackedPhp\JackedServer\Helpers\Debug;
 use JackedPhp\JackedServer\Services\Server;
 use JackedPhp\LiteConnect\SQLiteFactory;
 use OpenSwoole\Core\Coroutine\Pool\ClientPool;
@@ -93,11 +94,15 @@ class RunCommand extends Command
         $this->verifyDependencies();
 
         $optionConfig = $input->getOption(self::OPTION_CONFIG);
-        $this->debug('Config set to: ' . $optionConfig);
+        if ($optionConfig) {
+            $this->debug('Config set to: ' . $optionConfig);
+        }
 
         $inputPath = current($input->getArgument(self::ARGUMENT_PATH));
         $inputPath = empty($inputPath) ? null : $inputPath;
-        $this->debug('Input path set to: ' . $inputPath);
+        if ($inputPath) {
+            $this->debug('Input path set to: ' . $inputPath);
+        }
 
         $this->loadEnv($optionConfig);
 
@@ -174,18 +179,7 @@ class RunCommand extends Command
         ];
 
         try {
-            $this->debug([
-                'Initializing Server params:',
-                'Host: ' . $data['host'],
-                'Port: ' . $data['port'],
-                'Input File: ' . $data['inputFile'],
-                'Document Root: ' . $data['documentRoot'],
-                'Public Document Root: ' . $data['publicDocumentRoot'],
-                'Log Path: ' . $data['logPath'],
-                'Log Level: ' . $data['logLevel'],
-                'FastCGI Host: ' . $data['fastcgiHost'],
-                'FastCGI Port: ' . $data['fastcgiPort'],
-            ]);
+            $this->debug("Initializing Server params: \n\n" . Debug::dumpIo($data));
             $serverParams = ServerParams::from($data);
         } catch (Exception $e) {
             $this->io->error($e->getMessage());

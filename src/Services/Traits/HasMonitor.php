@@ -10,12 +10,9 @@ trait HasMonitor
 {
     protected function notifyRequestToMonitor(Request $request): void
     {
-        $this->print(
-            message: '<fg=#5b5b5b>' . Carbon::now()->format('Y-m-d H:i:s') . '</> - '
-                . '<fg=#6fa8dc;options=bold>' . $request->server['request_method'] . '</> '
-                . $request->server['request_uri'],
-            type: 'writeln',
-        );
+        $this->report('[' . Carbon::now()->format('Y-m-d H:i:s') . '] ['
+            . $request->server['request_method'] . '] '
+            . $request->server['request_uri']);
 
         if ($request->server['request_uri'] === '/conveyor/message') {
             return;

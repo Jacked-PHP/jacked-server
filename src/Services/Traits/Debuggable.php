@@ -4,6 +4,7 @@ namespace JackedPhp\JackedServer\Services\Traits;
 
 use Illuminate\Support\Arr;
 use Monolog\Level;
+use Symfony\Component\Console\Style\OutputStyle;
 
 trait Debuggable
 {
@@ -13,17 +14,11 @@ trait Debuggable
         Level $level = Level::Info,
         bool $skipPrint = false,
     ): void {
-        if (in_array($level, [Level::Info, Level::Error, Level::Warning, Level::Critical])) {
-            $this->logger->addRecord(level: $level, message: $message, context: $context);
-        }
-
-        if (!$this->debug) {
-            return;
-        }
-
-        if ($level === Level::Debug) {
-            $this->logger->addRecord(level: $level, message: $message, context: $context);
-        }
+        $this->logger->addRecord(
+            level: $level,
+            message: is_array($message) ? json_encode($message) : $message,
+            context: $context,
+        );
 
         if (count($context) > 0) {
             $message = array_map(function ($msg) use ($context) {
@@ -39,15 +34,37 @@ trait Debuggable
             }, Arr::wrap($message));
         }
 
-        if ($skipPrint) {
+        $isDebug = $level === Level::Debug;
+
+        if ($skipPrint || (!$this->debug && $isDebug)) {
+            return;
+        }
+
+        if (!$this->output instanceof OutputStyle) {
+            echo ($isDebug ? '[DEBUG] ' : '') . $message . PHP_EOL;
             return;
         }
 
         $this->output->block(
             messages: $message,
-            type: 'DEBUG',
-            style: 'fg=white;bg=black',
+            type: $isDebug ? 'DEBUG' : null,
+            style: $this->getBlockStyle($level),
             padding: true,
         );
+    }
+
+    private function getBlockStyle(Level $level): ?string
+    {
+        return match ($level) {
+            Level::Debug => 'fg=white;bg=black',
+            Level::Info => 'fg=white;bg=blue',
+            Level::Notice => 'fg=white;bg=black',
+            Level::Warning => 'fg=black;bg=yellow',
+            Level::Error => 'fg=red;bg=black',
+            Level::Critical => 'fg=white;bg=red',
+            Level::Alert => 'fg=white;bg=red',
+            Level::Emergency => 'fg=white;bg=red',
+            default => null,
+        };
     }
 }

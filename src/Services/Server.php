@@ -33,15 +33,14 @@ use JackedPhp\JackedServer\Services\Traits\HttpSupport;
 use JackedPhp\JackedServer\Services\Traits\WebSocketSupport;
 use JackedPhp\JackedServer\Services\Traits\HasAuthorizationTokenSupport;
 use Monolog\Handler\StreamHandler;
+use Monolog\Level;
 use Monolog\Logger;
 use OpenSwoole\Constant;
-use OpenSwoole\Coroutine\Http\Client as CoroutineHttpClient;
 use OpenSwoole\Http\Request;
 use OpenSwoole\Http\Response;
 use OpenSwoole\Server as OpenSwooleBaseServer;
 use OpenSwoole\WebSocket\Server as OpenSwooleServer;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\Console\Style\OutputStyle;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Throwable;
@@ -287,9 +286,7 @@ class Server
             . ' on ' . $server->host . ':' . $server->port
             . ' at ' . Carbon::now()->format('Y-m-d H:i:s');
 
-        $this->logger->info($this->logPrefix . $message);
-
-        $this->print($message, 'success');
+        $this->report($this->logPrefix . $message);
 
         $this->eventDispatcher->dispatch(new JackedServerStarted(
             host: $server->host,
@@ -339,19 +336,36 @@ class Server
 
     protected function sendWsMessage(string $channel, string $message): void
     {
-        $client = new CoroutineHttpClient($this->host, $this->port);
-        $client->setHeaders([
-            'Host' => $this->host . ':' . $this->port,
-            'User-Agent' => 'Jacked Server HTTP Proxy',
-            'Content-Type' => 'application/json',
+        $curl = curl_init();
+        curl_setopt_array($curl, [
+            CURLOPT_URL => "http://{$this->host}:{$this->port}/conveyor/message",
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 5,
+            CURLOPT_FOLLOWLOCATION => false,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => 'POST',
+            CURLOPT_POSTFIELDS => json_encode([
+                'channel' => $channel,
+                'message' => $message,
+            ]),
+            CURLOPT_HTTPHEADER => [
+                "Host: {$this->host}:{$this->port}",
+                'User-Agent: Jacked Server HTTP Proxy',
+                'Content-Type: application/json',
+            ],
         ]);
-        $client->set([ 'timeout' => 5 ]);
-        $client->setMethod('POST');
-        $client->setData(json_encode([
-            'channel' => $channel,
-            'message' => $message,
-        ]));
-        $client->execute('/conveyor/message');
+        $response = curl_exec($curl);
+        curl_close($curl);
+        if ($response === false) {
+            $this->report('Error sending message: ' . (curl_error($curl)),
+                context: [
+                    'channel' => $channel,
+                    'message' => $message,
+                ],
+                level: Level::Error);
+        }
     }
 
     private function prepareLogger(): void
@@ -409,18 +423,15 @@ class Server
             try {
                 $response->header($headerKey, $headerValue);
             } catch (Throwable $e) {
-                $this->print(
-                    message: 'Error at header space:' . $e->getMessage(),
-                    type: 'error',
-                );
-
-                $this->logger->error('Server Error', [
-                    'headers' => $headers,
-                    'status' => $status,
-                    'error' => $e->getMessage(),
-                    'headerKey' => $headerKey,
-                    'headerValue' => $headerValue,
-                ]);
+                $this->report('Error at header space:' . $e->getMessage(),
+                    context: [
+                        'headers' => $headers,
+                        'status' => $status,
+                        'error' => $e->getMessage(),
+                        'headerKey' => $headerKey,
+                        'headerValue' => $headerValue,
+                    ],
+                    level: Level::Error);
             }
         }
 
@@ -470,26 +481,5 @@ class Server
         }
 
         return OpenSwooleConfig::from($camelCasedSettings);
-    }
-
-    /**
-     * @param string $message
-     * @param string $type Possible values: 'info', 'warning', 'error', 'writeln'
-     * @return void
-     * @throws RedirectException
-     */
-    private function print(string $message, string $type = 'info'): void
-    {
-        if (!in_array($type, ['success', 'info', 'warning', 'error', 'writeln'])) {
-            $this->logger->error('Invalid type for server echo: ' . $type);
-            echo 'Message: ' . $message . PHP_EOL;
-            return;
-        }
-
-        if ($this->output instanceof OutputStyle) {
-            $this->output->{$type}($message);
-        } else {
-            echo $message . PHP_EOL;
-        }
     }
 }
