@@ -161,10 +161,6 @@ trait HttpSupport
                 'content' => $content,
             ], skipPrint: true);
 
-            $this->report($this->logPrefix . 'Request Time: {time}', context: [
-                'time' => Carbon::now()->format('Y-m-d H:i:s'),
-            ]);
-
             if (
                 IS_PHAR
                 && !file_exists(Arr::get($requestOptions, 'SCRIPT_FILENAME'))
@@ -200,10 +196,10 @@ trait HttpSupport
         $memoryUsed = $endMemory - $startMemory;
         $this->report($this->logPrefix . 'Request Time taken: {timeTaken}', context: [
             'timeTaken' => round($timeTaken, 5) . ' seconds',
-        ]);
+        ], level: Level::Notice);
         $this->report($this->logPrefix . 'Request Memory used: {memoryUsed}', context: [
             'memoryUsed' => number_format($memoryUsed) . ' bytes',
-        ]);
+        ], level: Level::Notice);
 
         if ($result === null) {
             return null;

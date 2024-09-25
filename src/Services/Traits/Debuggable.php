@@ -3,7 +3,10 @@
 namespace JackedPhp\JackedServer\Services\Traits;
 
 use Illuminate\Support\Arr;
+use JackedPhp\JackedServer\Services\Logger\EchoHandler;
+use Monolog\Handler\StreamHandler;
 use Monolog\Level;
+use Monolog\Logger;
 use Symfony\Component\Console\Style\OutputStyle;
 
 trait Debuggable
@@ -40,8 +43,7 @@ trait Debuggable
             return;
         }
 
-        if (!$this->output instanceof OutputStyle) {
-            echo ($isDebug ? '[DEBUG] ' : '') . $message . PHP_EOL;
+        if ($this->output === null || !$this->output instanceof OutputStyle) {
             return;
         }
 
@@ -58,7 +60,7 @@ trait Debuggable
         return match ($level) {
             Level::Debug => 'fg=white;bg=black',
             Level::Info => 'fg=white;bg=blue',
-            Level::Notice => 'fg=white;bg=black',
+            Level::Notice => 'fg=white;bg=gray',
             Level::Warning => 'fg=black;bg=yellow',
             Level::Error => 'fg=red;bg=black',
             Level::Critical => 'fg=white;bg=red',
@@ -66,5 +68,19 @@ trait Debuggable
             Level::Emergency => 'fg=white;bg=red',
             default => null,
         };
+    }
+
+    protected function prepareLogger(): void
+    {
+        if ($this->logPath !== null) {
+            $this->logger->pushHandler(new StreamHandler(
+                stream: $this->logPath,
+                level: $this->logLevel,
+            ));
+        } else {
+            $this->logger->pushHandler(new EchoHandler(
+                level: $this->logLevel
+            ));
+        }
     }
 }

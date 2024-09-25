@@ -21,6 +21,7 @@ trait HasAuthorizationTokenSupport
             },
         );
 
+        // This is a handler for the websocket auth request ONLY.
         $this->eventDispatcher->addListener(
             eventName: JackedServerRequestIntercepted::class,
             listener: function (JackedServerRequestIntercepted $event) {
@@ -32,6 +33,7 @@ trait HasAuthorizationTokenSupport
                     || $event->request->server['request_method'] !== 'POST'
                     || !is_string($this->websocketSecret)
                 ) {
+                    // not a websocket auth request
                     return;
                 }
 

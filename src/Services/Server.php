@@ -24,7 +24,7 @@ use JackedPhp\JackedServer\Events\JackedServerStarted;
 use JackedPhp\JackedServer\Exceptions\AuthorizationException;
 use JackedPhp\JackedServer\Exceptions\RedirectException;
 use JackedPhp\JackedServer\Helpers\Config;
-use JackedPhp\JackedServer\Services\Logger\EchoHandler;
+use JackedPhp\JackedServer\Helpers\Debug;
 use JackedPhp\JackedServer\Services\Response as JackedResponse;
 use JackedPhp\JackedServer\Services\Traits\Debuggable;
 use JackedPhp\JackedServer\Services\Traits\HasMonitor;
@@ -32,16 +32,14 @@ use JackedPhp\JackedServer\Services\Traits\HasProperties;
 use JackedPhp\JackedServer\Services\Traits\HttpSupport;
 use JackedPhp\JackedServer\Services\Traits\WebSocketSupport;
 use JackedPhp\JackedServer\Services\Traits\HasAuthorizationTokenSupport;
-use Monolog\Handler\StreamHandler;
 use Monolog\Level;
 use Monolog\Logger;
-use OpenSwoole\Constant;
 use OpenSwoole\Http\Request;
 use OpenSwoole\Http\Response;
 use OpenSwoole\Server as OpenSwooleBaseServer;
 use OpenSwoole\WebSocket\Server as OpenSwooleServer;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\Console\Style\OutputStyle;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Throwable;
 use JackedPhp\JackedServer\Constants as JackedServerConstants;
@@ -54,6 +52,8 @@ class Server
     use HasMonitor;
     use HasProperties;
     use Debuggable;
+
+    protected ConveyorServer $conveyorServer;
 
     private LoggerInterface $logger;
 
@@ -82,7 +82,7 @@ class Server
 
     private ?string $publicDocumentRoot = ROOT_DIR;
 
-    private ?SymfonyStyle $output = null;
+    private ?OutputStyle $output = null;
 
     private ?ServerPersistence $serverPersistence = null;
 
@@ -128,6 +128,14 @@ class Server
 
     private bool $debug = false;
 
+    public function __construct(
+        ?ConveyorServer $conveyorServer = null,
+        ?Logger $logger = null
+    ) {
+        $this->conveyorServer = $conveyorServer ?? new ConveyorServer();
+        $this->logger = $logger ?? new Logger(name: 'jacked-server-log');
+    }
+
     public static function init(): static
     {
         return new static();
@@ -136,7 +144,7 @@ class Server
     /**
      * @throws Exception
      */
-    public function run(): ConveyorServer
+    public function run(): void
     {
         $this->eventDispatcher = $this->eventDispatcher ?? new EventDispatcher();
 
@@ -144,16 +152,17 @@ class Server
 
         $this->executePreServerActions();
 
-        return ConveyorServer::start(
-            host: $this->host,
-            port: $this->port,
-            mode: $this->serverType,
-            ssl: $this->ssl ? Constant::SOCK_TCP | Constant::SSL : Constant::SOCK_TCP,
-            serverOptions: $this->getServerConfig()->getSnakeCasedData(),
-            conveyorOptions: [
+        $this->conveyorServer
+            ->host($this->host)
+            ->port($this->port)
+            ->mode($this->serverType)
+            ->socketType($this->ssl ? JackedServerConstants::OPENSWOOLE_SOCK_TCP | JackedServerConstants::OPENSWOOLE_SSL
+                : JackedServerConstants::OPENSWOOLE_SOCK_TCP)
+            ->serverOptions($this->getServerConfig()->getSnakeCasedData())
+            ->conveyorOptions([
                 Constants::USE_ACKNOWLEDGMENT => $this->websocketAcknowledgment,
-            ],
-            eventListeners: [
+            ])
+            ->eventListeners([
                 Constants::EVENT_SERVER_STARTED => fn(ServerStartedEvent $event)
                     => $this->handleStart($event->server),
                 Constants::EVENT_PRE_SERVER_START => function (PreServerStartEvent $event) {
@@ -161,16 +170,16 @@ class Server
                         $event->server->listen(
                             host: $event->server->host,
                             port: $this->secondaryPort,
-                            sockType: Constant::SOCK_TCP,
+                            sockType: JackedServerConstants::OPENSWOOLE_SOCK_TCP,
                         )->on('request', [$this, 'sslRedirectRequest']);
                     }
                     $event->server->on('handshake', [$this, 'handleWsHandshake']);
                 },
                 Constants::EVENT_MESSAGE_RECEIVED => fn(MessageReceivedEvent $event)
                     => $this->handleWsMessage($event),
-            ],
-            persistence: $this->getConveyorPersistence(),
-        );
+            ])
+            ->persistence($this->getConveyorPersistence())
+            ->start();
     }
 
     /**
@@ -190,14 +199,17 @@ class Server
     private function executePreServerActions(): void
     {
         if ($this->websocketEnabled && $this->websocketAuth) {
+            // This starts a request interception for websocket auth.
             $this->activateWsAuth();
         }
 
+        // This declares the filter for Request Handling.
         Filter::addFilter(
             tag: Constants::FILTER_REQUEST_HANDLER,
             functionToAdd: fn() => [$this, 'handleRequest'],
         );
 
+        // This is an action hook to run before server initialization.
         Action::doAction(JackedServerConstants::PRE_SERVER_ACTION, $this);
     }
 
@@ -368,21 +380,6 @@ class Server
         }
     }
 
-    private function prepareLogger(): void
-    {
-        $this->logger = new Logger(name: 'jacked-server-log');
-        if ($this->logPath !== null) {
-            $this->logger->pushHandler(new StreamHandler(
-                stream: $this->logPath,
-                level: $this->logLevel,
-            ));
-        } else {
-            $this->logger->pushHandler(new EchoHandler(
-                level: $this->logLevel
-            ));
-        }
-    }
-
     private function sendResponse(
         Response $response,
         JackedResponse $jackedResponse,
@@ -448,6 +445,18 @@ class Server
             $response->write($body);
         } else {
             $response->end();
+        }
+
+        if ($this->debug) {
+            $responseDebugData = [
+                'status' => $status[0],
+                'headers' => Debug::dumpIo($headers),
+            ];
+            $this->report(
+                message: 'Response sent to client: ' . Debug::dumpIo($responseDebugData),
+                context: $responseDebugData,
+                level: Level::Debug,
+            );
         }
     }
 
