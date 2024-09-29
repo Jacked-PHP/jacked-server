@@ -10,11 +10,13 @@ use Conveyor\Events\PreServerStartEvent;
 use Conveyor\Events\ServerStartedEvent;
 use Conveyor\Helpers\Arr;
 use Conveyor\SubProtocols\Conveyor\Conveyor;
-use Conveyor\SubProtocols\Conveyor\Persistence\Interfaces\GenericPersistenceInterface;
 use Exception;
+use GuzzleHttp\Client;
+use GuzzleHttp\Exception\GuzzleException;
 use Hook\Action;
 use Hook\Filter;
 use Illuminate\Support\Str;
+use JackedPhp\JackedServer\Constants as JackedServerConstants;
 use JackedPhp\JackedServer\Data\OpenSwooleConfig;
 use JackedPhp\JackedServer\Data\ServerPersistence;
 use JackedPhp\JackedServer\Events\JackedRequestError;
@@ -27,11 +29,11 @@ use JackedPhp\JackedServer\Helpers\Config;
 use JackedPhp\JackedServer\Helpers\Debug;
 use JackedPhp\JackedServer\Services\Response as JackedResponse;
 use JackedPhp\JackedServer\Services\Traits\Debuggable;
+use JackedPhp\JackedServer\Services\Traits\HasAuthorizationTokenSupport;
 use JackedPhp\JackedServer\Services\Traits\HasMonitor;
 use JackedPhp\JackedServer\Services\Traits\HasProperties;
 use JackedPhp\JackedServer\Services\Traits\HttpSupport;
 use JackedPhp\JackedServer\Services\Traits\WebSocketSupport;
-use JackedPhp\JackedServer\Services\Traits\HasAuthorizationTokenSupport;
 use Monolog\Level;
 use Monolog\Logger;
 use OpenSwoole\Http\Request;
@@ -42,7 +44,6 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Style\OutputStyle;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Throwable;
-use JackedPhp\JackedServer\Constants as JackedServerConstants;
 
 class Server
 {
@@ -150,13 +151,26 @@ class Server
 
         $this->prepareLogger();
 
-        $this->executePreServerActions();
+        if ($this->websocketEnabled && $this->websocketAuth) {
+            // This starts a request interception for websocket auth.
+            $this->activateWsAuth();
+        }
+
+        // This declares the Request Handling by hooking into Conveyor.
+        Filter::addFilter(
+            tag: Constants::FILTER_REQUEST_HANDLER,
+            functionToAdd: fn() => [$this, 'handleRequest'],
+        );
+
+        // This is an action hook to run before server initialization.
+        Action::doAction(JackedServerConstants::PRE_SERVER_ACTION, $this);
 
         $this->conveyorServer
             ->host($this->host)
             ->port($this->port)
             ->mode($this->serverType)
-            ->socketType($this->ssl ? JackedServerConstants::OPENSWOOLE_SOCK_TCP | JackedServerConstants::OPENSWOOLE_SSL
+            ->socketType($this->ssl ?
+                JackedServerConstants::OPENSWOOLE_SOCK_TCP | JackedServerConstants::OPENSWOOLE_SSL
                 : JackedServerConstants::OPENSWOOLE_SOCK_TCP)
             ->serverOptions($this->getServerConfig()->getSnakeCasedData())
             ->conveyorOptions([
@@ -178,51 +192,25 @@ class Server
                 Constants::EVENT_MESSAGE_RECEIVED => fn(MessageReceivedEvent $event)
                     => $this->handleWsMessage($event),
             ])
-            ->persistence($this->getConveyorPersistence())
+            ->persistence(array_merge(
+                Conveyor::defaultPersistence(),
+                $this->serverPersistence->conveyorPersistence,
+            ))
             ->start();
-    }
-
-    /**
-     * @return array<GenericPersistenceInterface>
-     */
-    private function getConveyorPersistence(): array
-    {
-        return array_merge(
-            Conveyor::defaultPersistence(),
-            $this->serverPersistence->conveyorPersistence,
-        );
-    }
-
-    /**
-     * Here is where we activate features.
-     */
-    private function executePreServerActions(): void
-    {
-        if ($this->websocketEnabled && $this->websocketAuth) {
-            // This starts a request interception for websocket auth.
-            $this->activateWsAuth();
-        }
-
-        // This declares the filter for Request Handling.
-        Filter::addFilter(
-            tag: Constants::FILTER_REQUEST_HANDLER,
-            functionToAdd: fn() => [$this, 'handleRequest'],
-        );
-
-        // This is an action hook to run before server initialization.
-        Action::doAction(JackedServerConstants::PRE_SERVER_ACTION, $this);
     }
 
     public function handleWsHandshake(Request $request, Response $response): bool
     {
+        $return = false;
+
         if (!$this->websocketEnabled) {
-            $this->logger->info($this->logPrefix . ' ws 2');
+            $this->report($this->logPrefix . ' Message received, but WebSocket Not enabled!', level: Level::Warning);
             $response->status(401);
             $response->end('WebSocket Not enabled!');
-            return false;
+            goto handshake_conclusion;
         }
 
-        $this->logger->info($this->logPrefix . ' Handshake received from ' . $request->fd);
+        $this->report($this->logPrefix . ' Handshake received from ' . $request->fd);
 
         // evaluate intention to upgrade to websocket
         try {
@@ -230,7 +218,7 @@ class Server
         } catch (Exception $e) {
             $response->status(400);
             $response->end($e->getMessage());
-            return false;
+            goto handshake_conclusion;
         }
 
         // check for authorization
@@ -244,19 +232,23 @@ class Server
                 }
             }
         } catch (AuthorizationException $e) {
-            $this->logger->error($this->logPrefix . $e->getMessage(), [
-                'file' => __FILE__ . ':' . __LINE__,
-            ]);
+            $this->report($this->logPrefix . $e->getMessage(),
+                context: [
+                    'file' => __FILE__ . ':' . __LINE__,
+                ],
+                level: Level::Error);
             $response->status(401);
             $response->end($e->getMessage());
-            return false;
+            goto handshake_conclusion;
         } catch (Exception $e) {
-            $this->logger->error($this->logPrefix . 'Websocket Handshake Exception: ' . $e->getMessage(), [
-                'file' => __FILE__ . ':' . __LINE__,
-            ]);
+            $this->report($this->logPrefix . 'Websocket Handshake Exception: ' . $e->getMessage(),
+                context: [
+                    'file' => __FILE__ . ':' . __LINE__,
+                ],
+                level: Level::Error);
             $response->status(500);
             $response->end($e->getMessage());
-            return false;
+            goto handshake_conclusion;
         }
 
         foreach ($headers as $headerKey => $val) {
@@ -266,7 +258,14 @@ class Server
         $response->status(101);
         $response->end();
 
-        return true;
+        $return = true;
+
+        handshake_conclusion:
+
+        // This is an action hook to run before server initialization.
+        Action::doAction(JackedServerConstants::HANDSHAKE_CONCLUSION, $this);
+
+        return $return;
     }
 
     public function handleWsMessage(MessageReceivedEvent $event): void
@@ -277,7 +276,7 @@ class Server
             return;
         }
 
-        $this->logger->info($this->logPrefix . ' Message received from ' . $parsedData->fd, [
+        $this->report($this->logPrefix . ' Message received from ' . $parsedData->fd, [
             'event-data' => $event->data,
         ]);
     }
@@ -327,7 +326,7 @@ class Server
                 request: $request,
                 response: $response,
             ));
-            return;
+            goto request_conclusion;
         }
 
         try {
@@ -335,7 +334,7 @@ class Server
         } catch (RedirectException $e) {
             $response->status(302);
             $response->redirect($e->getMessage());
-            return;
+            goto request_conclusion;
         }
 
         /** @var ?JackedResponse $jackedResponse */
@@ -344,39 +343,37 @@ class Server
         if (null !== $jackedResponse) {
             $this->sendResponse($response, $jackedResponse);
         }
+
+        request_conclusion:
+
+        // This is an action hook to run before server initialization.
+        Action::doAction(JackedServerConstants::REQUEST_CONCLUSION, $this);
     }
 
     protected function sendWsMessage(string $channel, string $message): void
     {
-        $curl = curl_init();
-        curl_setopt_array($curl, [
-            CURLOPT_URL => "http://{$this->host}:{$this->port}/conveyor/message",
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_ENCODING => '',
-            CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 5,
-            CURLOPT_FOLLOWLOCATION => false,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => 'POST',
-            CURLOPT_POSTFIELDS => json_encode([
-                'channel' => $channel,
-                'message' => $message,
-            ]),
-            CURLOPT_HTTPHEADER => [
-                "Host: {$this->host}:{$this->port}",
-                'User-Agent: Jacked Server HTTP Proxy',
-                'Content-Type: application/json',
-            ],
-        ]);
-        $response = curl_exec($curl);
-        curl_close($curl);
-        if ($response === false) {
-            $this->report('Error sending message: ' . (curl_error($curl)),
-                context: [
+        try {
+            $client = new Client([
+                'base_uri' => ($this->ssl ? 'https' : 'http') . "://{$this->host}:{$this->port}",
+                'timeout' => 5,
+            ]);
+
+            $client->post('/conveyor/message', [
+                'json' => [
                     'channel' => $channel,
                     'message' => $message,
                 ],
-                level: Level::Error);
+                'headers' => [
+                    'Host' => "{$this->host}:{$this->port}",
+                    'User-Agent' => 'Jacked Server HTTP Proxy',
+                    'Content-Type' => 'application/json',
+                ],
+            ]);
+        } catch (GuzzleException $e) {
+            $this->report('Error sending message: ' . $e->getMessage(), [
+                'channel' => $channel,
+                'message' => $message,
+            ], Level::Error);
         }
     }
 
@@ -461,7 +458,6 @@ class Server
     }
 
     /**
-     * @param bool $ssl
      * @return OpenSwooleConfig
      */
     private function getServerConfig(): OpenSwooleConfig
@@ -469,17 +465,17 @@ class Server
         $camelCasedSettings = [];
         foreach (
             array_merge(Config::get('openswoole-server-settings', [
-            // base settings
-            'document_root' => $this->publicDocumentRoot, // @phpstan-ignore-line
-            'enable_static_handler' => true,
-            'static_handler_locations' => [ '/imgs', '/css' ],
+                // base settings
+                'document_root' => $this->publicDocumentRoot, // @phpstan-ignore-line
+                'enable_static_handler' => true,
+                'static_handler_locations' => [ '/imgs', '/css' ],
 
-            // reactor and workers
-            'reactor_num' => $this->reactorNum,
-            'worker_num' => $this->workerNum,
+                // reactor and workers
+                'reactor_num' => $this->reactorNum,
+                'worker_num' => $this->workerNum,
 
-            // timeout
-            'max_request_execution_time' => $this->timeout,
+                // timeout
+                'max_request_execution_time' => $this->timeout,
             ]), ($this->ssl ? [
                 'ssl_cert_file' => $this->sslCertFile,
                 'ssl_key_file' => $this->sslKeyFile,

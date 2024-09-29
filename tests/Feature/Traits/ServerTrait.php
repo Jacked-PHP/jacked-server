@@ -4,8 +4,6 @@ namespace Tests\Feature\Traits;
 
 use DirectoryIterator;
 use Exception;
-use Firebase\JWT\JWT;
-use Illuminate\Support\Facades\Process;
 use JackedPhp\JackedServer\Commands\Traits\HasPersistence;
 use JackedPhp\JackedServer\Data\ServerPersistence;
 use JackedPhp\JackedServer\Helpers\Config;

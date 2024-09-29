@@ -1,6 +1,6 @@
 <?php
 
-namespace Feature;
+namespace Tests\Feature;
 
 use JackedPhp\JackedServer\Helpers\Config;
 use OpenSwoole\Atomic;

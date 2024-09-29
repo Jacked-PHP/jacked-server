@@ -229,13 +229,20 @@ trait HttpSupport
         array $cookies,
         int $contentLength,
     ): array {
-        $this->report($this->logPrefix . 'Debug: prepare request options', context: [
-            'method' => $method,
-            'serverInfo' => $serverInfo,
-            'header' => $header,
-            'cookies' => $cookies,
-            'contentLength' => $contentLength,
-        ], level: Level::Debug);
+        if ($this->debug) {
+            $options = [
+                'method' => $method,
+                'serverInfo' => $serverInfo,
+                'header' => $header,
+                'cookies' => $cookies,
+                'contentLength' => $contentLength,
+            ];
+            $this->report(
+                message: "Prepare request options\n\n" . Debug::dumpIo($options),
+                context: $options,
+                level: Level::Debug,
+            );
+        }
 
         $requestOptions = [];
         $this->addServerInfo($requestOptions, $serverInfo);
@@ -262,6 +269,14 @@ trait HttpSupport
 
     private function getProjectLocation(array $header, array $serverInfo, string $requestUri): array
     {
+        /**
+         * Description: This is a filter for the server's document root.
+         * Name: Constants::ROUTING_FILTER
+         * Params:
+         *   - $param1: array{path_info: string, document_root: string, script_name: string, script_filename: string}
+         *   - $param2: array<mixed>
+         * Returns: string
+         */
         $route = Filter::applyFilters(
             Constants::ROUTING_FILTER,
             [
@@ -275,7 +290,7 @@ trait HttpSupport
 
         if ($this->debug) {
             $this->report(
-                message: $this->logPrefix . "Debug: routing info: \n\n" . Debug::dumpIo($route),
+                message: "Routing info: \n\n" . Debug::dumpIo($route),
                 context: $route,
                 level: Level::Debug,
             );

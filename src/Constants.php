@@ -2,11 +2,11 @@
 
 namespace JackedPhp\JackedServer;
 
-use JackedPhp\JackedServer\Constants as JackedServerConstants;
-
 class Constants
 {
+    // ============================================================
     // OpenSwoole
+    // ============================================================
 
     /**
      * Equivalent to: OpenSwoole\Constant::SOCK_TCP
@@ -18,14 +18,43 @@ class Constants
      */
     public const OPENSWOOLE_SSL = 512;
 
+    // ============================================================
     // Actions
+    // ============================================================
 
     /**
+     * Actions that are executed before the server starts.
      *
+     * E.g.: Hook\Action::addAction(
+     *           tag: Constants::PRE_SERVER_ACTION,
+     *           functionToAdd: fn(\JackedPhp\JackedServer\Services\Server $server) => null,
+     *       );
      */
     public const PRE_SERVER_ACTION = 'js-action.pre_server_action';
 
+    /**
+     * Actions that are executed after WebSocket Handshake.
+     *
+     * E.g.: Hook\Action::addAction(
+     *           tag: Constants::HANDSHAKE_CONCLUSION,
+     *           functionToAdd: fn(\JackedPhp\JackedServer\Services\Server $server) => null,
+     *       );
+     */
+    public const HANDSHAKE_CONCLUSION = 'js-action.handshake_conclusion';
+
+    /**
+     * Actions that are executed after the server requests is concluded and response sent back.
+     *
+     * E.g.: Hook\Action::addAction(
+     *           tag: Constants::REQUEST_CONCLUSION,
+     *           functionToAdd: fn(\JackedPhp\JackedServer\Services\Server $server) => null,
+     *       );
+     */
+    public const REQUEST_CONCLUSION = 'js-action.request_conclusion';
+
+    // ============================================================
     // Filters
+    // ============================================================
 
     /**
      * Filter for intercepting requests.
@@ -34,7 +63,7 @@ class Constants
      * you have available will be the default OpenSwoole Request object.
      *
      * E.g.: Hook\Filter::addFilter(
-     *           tag: JackedServerConstants::INTERCEPT_REQUEST,
+     *           tag: Constants::INTERCEPT_REQUEST,
      *           functionToAdd: fn(array $interceptedUris) => $interceptedUris,
      *       );
      */
@@ -47,7 +76,7 @@ class Constants
      * will be routed according to the routing specifications.
      *
      * E.g.: Hook\Filter::addFilter(
-     *           tag: JackedServerConstants::ROUTING_FILTER,
+     *           tag: Constants::ROUTING_FILTER,
      *           functionToAdd: fn(array $locations) => $locations,
      *       );
      */
