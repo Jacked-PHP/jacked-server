@@ -7,7 +7,7 @@ runs:
       uses: shivammathur/setup-php@v2
       with:
         php-version: '8.3'
-        extensions: openswoole, curl
+        extensions: openswoole, curl, pcntl
         coverage: none
         tools: composer, phpunit
       env:
@@ -31,17 +31,13 @@ runs:
       shell: bash
       run: composer install --prefer-dist --no-progress
 
-    - name: Change php-fpm to run with TCP
-      shell: bash
-      run: sudo sed -i 's/listen = \/run\/php\/php8.2-fpm.sock/listen = 127.0.0.1:9000/' /etc/php/8.2/fpm/pool.d/www.conf
-
-    - name: Keep only php-fpm 8.2
+    - name: Keep only php-fpm 8.3
       shell: bash
       run: |
         sudo service php8.1-fpm stop
-        sudo service php8.2-fpm stop
+        sudo service php8.3-fpm stop
         sudo ps aux | grep php-fpm
-        sudo service php8.2-fpm start
+        sudo service php8.3-fpm start
 
     - name: Copy jacked server to linux host place
       shell: bash
