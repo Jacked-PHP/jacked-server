@@ -43,4 +43,5 @@ runs:
       shell: bash
       run: |
         sudo cp -r ${{ github.workspace }} /var/www/jacked-server
-        sudo chown -R www-data /var/www/jacked-server
+        # sudo chown -R www-data /var/www/jacked-server
+        sudo /var/www/jacked-server

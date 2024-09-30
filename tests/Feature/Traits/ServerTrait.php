@@ -62,7 +62,6 @@ trait ServerTrait
         if (!empty($output2)) {
             throw new Exception('Failed to kill server. Output: ' . $output2);
         }
-        echo "\n\nServer killed. Ready for more testing...\n\n";
     }
 
     public static function getServerProcesses(): string
