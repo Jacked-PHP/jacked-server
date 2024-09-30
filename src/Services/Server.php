@@ -237,7 +237,7 @@ class Server
                     'file' => __FILE__ . ':' . __LINE__,
                 ],
                 level: Level::Error);
-            $response->status(401);
+            $response->status(403);
             $response->end($e->getMessage());
             goto handshake_conclusion;
         } catch (Exception $e) {

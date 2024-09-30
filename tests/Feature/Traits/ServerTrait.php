@@ -5,16 +5,11 @@ namespace Tests\Feature\Traits;
 use DirectoryIterator;
 use Exception;
 use JackedPhp\JackedServer\Commands\Traits\HasPersistence;
-use JackedPhp\JackedServer\Data\ServerPersistence;
 use JackedPhp\JackedServer\Helpers\Config;
-use JackedPhp\JackedServer\Services\Server;
 use JackedPhp\LiteConnect\SQLiteFactory;
-use Monolog\Level;
 use OpenSwoole\Core\Coroutine\Pool\ClientPool;
 use OpenSwoole\Coroutine;
 use OpenSwoole\Coroutine\System;
-use OpenSwoole\Process as OpenSwooleProcess;
-use Symfony\Component\EventDispatcher\EventDispatcher;
 
 trait ServerTrait
 {
@@ -27,75 +22,61 @@ trait ServerTrait
     ): int {
         $this->startDatabase(configFile: $configFile);
 
-        $output = self::getServerProcesses(configFile: $configFile);
-        self::tearServerDown(configFile: $configFile);
+        $output = self::getServerProcesses();
+        self::tearServerDown();
         if (!empty($output)) {
             throw new Exception('There is an active server in that port! Output: ' . $output);
         }
 
-        $httpServer = new OpenSwooleProcess(
-            function (OpenSwooleProcess $worker) use ($configFile) {
-                Server::init()
-                    ->port(Config::get('port', configFile: $configFile))
-                    ->inputFile(Config::get('input-file', configFile: $configFile))
-                    ->documentRoot(Config::get('openswoole-server-settings.document_root', configFile: $configFile))
-                    ->eventDispatcher(new EventDispatcher())
-                    ->serverPersistence(new ServerPersistence(
-                        connectionPool: $this->connectionPool,
-                        conveyorPersistence: [],
-                    ))
-                    ->logPath(ROOT_DIR . '/logs/logs.log')
-                    ->logLevel(Level::Warning->value)
-                    ->websocketEnabled(Config::get('websocket.enabled', configFile: $configFile))
-                    ->websocketAuth(Config::get('websocket.auth', configFile: $configFile))
-                    ->websocketToken(Config::get('websocket.token', configFile: $configFile))
-                    ->websocketSecret(Config::get('websocket.secret', configFile: $configFile))
-                    ->run();
-            }
-        );
+        $pid = null;
+        $command = 'php ' . ROOT_DIR . '/server.php ' . $configFile . ' > /dev/null 2>&1 & echo $!';
+        Coroutine::run(function () use ($configFile, $command, &$pid) {
+            $pid = System::exec($command);
+        });
 
-        $pid = $httpServer->start();
+        if (is_array($pid) && isset($pid['output'])) {
+            $pid = trim($pid['output']);
+        }
+
+        if (!$pid || !is_numeric($pid)) {
+            throw new Exception('Failed to start server or capture PID.');
+        }
 
         $counter = 0;
         $threshold = 10; // seconds
-        while (
-            empty(self::getServerProcesses($configFile))
-            && $counter < $threshold
-        ) {
+        while (empty(self::getServerProcesses()) && $counter < $threshold) {
             $counter++;
-            sleep(1);
+            usleep(200000); // 0.2 seconds
         }
 
         return $pid;
     }
 
-    public static function tearServerDown(string $configFile): void
+    public static function tearServerDown(): void
     {
-        $command = 'lsof -i -P -n '
-            . '| grep LISTEN '
-            . '| grep ' . Config::get('port', configFile: $configFile) . ' '
-            . '| awk \'{print $2}\' '
-            . '| xargs -I {} kill -9 {}';
-
+        $processName = 'jacked-server-process';
+        $command = "ps aux | grep '$processName' | grep -v grep | awk '{print $2}' | xargs -I {} kill -9 {}";
         Coroutine::run(fn() => System::exec($command));
 
-        // verify
-        $output2 = self::getServerProcesses($configFile);
+        $output2 = self::getServerProcesses();
         if (!empty($output2)) {
             throw new Exception('Failed to kill server. Output: ' . $output2);
         }
     }
 
-    public static function getServerProcesses(string $configFile): string
+    public static function getServerProcesses(): string
     {
+        $processName = 'jacked-server-process';
+        $command = "ps aux | grep '$processName' | grep -v grep";
         $output = '';
-        $port = Config::get('port', configFile: $configFile);
 
-        Coroutine::run(function () use (&$output, $port) {
-            $output = System::exec('lsof -i -P -n | grep LISTEN | grep ' . $port);
+        Coroutine::run(function () use (&$output, $command) {
+            $output = System::exec($command);
 
-            if (is_array($output)) {
+            if (is_array($output) && isset($output['output'])) {
                 $output = $output['output'];
+            } elseif (is_array($output)) {
+                $output = implode("\n", $output);
             }
         });
 

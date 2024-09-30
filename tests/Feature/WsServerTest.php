@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use Error;
+use Exception;
 use JackedPhp\JackedServer\Helpers\Config;
 use OpenSwoole\Atomic;
 use OpenSwoole\Coroutine;
@@ -10,6 +12,7 @@ use OpenSwoole\Process;
 use Tests\TestCase;
 use Kanata\ConveyorServerClient\Client;
 use Throwable;
+use WebSocket\ConnectionException;
 
 class WsServerTest extends TestCase
 {
@@ -67,6 +70,7 @@ class WsServerTest extends TestCase
                     },
                     'timeout' => $timeout,
                 ]);
+
                 $client->connect();
             },
             redirectStdIO: true,
@@ -217,12 +221,13 @@ class WsServerTest extends TestCase
         $result = $process->read();
 
         $parsedResult = json_decode($result, true);
+
         $this->assertEquals(
             expected: 'Reconnection due to failure Reached!',
             actual: $parsedResult['status'],
         );
         $this->assertStringContainsString(
-            needle: '401',
+            needle: '403',
             haystack: $parsedResult['rawMessage'],
         );
     }
