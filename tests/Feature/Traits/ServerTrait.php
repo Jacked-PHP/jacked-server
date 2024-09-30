@@ -56,7 +56,8 @@ trait ServerTrait
     {
         $processName = 'jacked-server-process';
         $command = "ps aux | grep '$processName' | grep -v grep | awk '{print $2}' | xargs -I {} kill -9 {}";
-        Coroutine::run(fn() => System::exec($command));
+
+        Coroutine::run(fn() => System::exec($command, get_error_stream: true));
 
         $output2 = self::getServerProcesses();
         if (!empty($output2)) {

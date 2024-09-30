@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use JackedPhp\JackedServer\Helpers\Config;
 use OpenSwoole\Coroutine;
 use OpenSwoole\Coroutine\Http\Client as CoroutineHttpClient;
-use OpenSwoole\Process;
 use Tests\TestCase;
 
 class HttpServerTest extends TestCase
@@ -14,7 +13,7 @@ class HttpServerTest extends TestCase
     {
         $configFile = ROOT_DIR . '/config/jacked-server-http.php';
 
-        $serverPid = $this->startServer(configFile: $configFile);
+        $this->startServer(configFile: $configFile);
         $status = null;
         $outcome = '';
 
@@ -32,7 +31,7 @@ class HttpServerTest extends TestCase
         );
         $this->assertEquals(200, $status);
 
-        Process::kill($serverPid, SIGKILL);
+        self::tearServerDown();
         sleep(3);
     }
 
@@ -40,7 +39,7 @@ class HttpServerTest extends TestCase
     {
         $configFile = ROOT_DIR . '/config/jacked-server-http.php';
 
-        $serverPid = $this->startServer(configFile: $configFile);
+        $this->startServer(configFile: $configFile);
         $status = null;
         $outcome = '';
         $expectedData = json_encode(['data' => 'test']);
@@ -64,7 +63,7 @@ class HttpServerTest extends TestCase
         );
         $this->assertEquals(200, $status);
 
-        Process::kill($serverPid, SIGKILL);
+        self::tearServerDown();
         sleep(3);
     }
 
@@ -72,7 +71,7 @@ class HttpServerTest extends TestCase
     {
         $configFile = ROOT_DIR . '/config/jacked-server-http.php';
 
-        $serverPid = $this->startServer(configFile: $configFile);
+        $this->startServer(configFile: $configFile);
         $status = null;
         $outcome = '';
         $expectedData = ['data' => 'test'];
@@ -96,7 +95,7 @@ class HttpServerTest extends TestCase
         );
         $this->assertEquals(200, $status);
 
-        Process::kill($serverPid, SIGKILL);
+        self::tearServerDown();
         sleep(3);
     }
 }

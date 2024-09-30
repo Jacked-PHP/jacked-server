@@ -24,5 +24,4 @@ jobs:
         shell: bash
         run: |
           cd /var/www/jacked-server
-          sudo vendor/bin/phpunit
-          # sudo -u www-data -- vendor/bin/phpunit
+          sudo -u www-data -- vendor/bin/phpunit

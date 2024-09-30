@@ -2,8 +2,6 @@
 
 namespace Tests\Feature;
 
-use Error;
-use Exception;
 use JackedPhp\JackedServer\Helpers\Config;
 use OpenSwoole\Atomic;
 use OpenSwoole\Coroutine;
@@ -12,25 +10,9 @@ use OpenSwoole\Process;
 use Tests\TestCase;
 use Kanata\ConveyorServerClient\Client;
 use Throwable;
-use WebSocket\ConnectionException;
 
 class WsServerTest extends TestCase
 {
-    /** @var array<int>  */
-    protected array $processesPids;
-
-    /**
-     * @after
-     * @return void
-     */
-    public function stopProcesses(): void
-    {
-        foreach ($this->processesPids as $pid) {
-            Process::kill($pid, SIGKILL);
-        }
-        sleep(3);
-    }
-
     protected function startWsClient(
         string $configFile,
         ?callable $onReadyCallback = null,
@@ -76,7 +58,7 @@ class WsServerTest extends TestCase
             redirectStdIO: true,
             enableCoroutine: false,
         );
-        $this->processesPids[] = $process->start();
+        $process->start();
 
         if (null !== $processTimeout) {
             $process->setTimeout($processTimeout);
@@ -113,7 +95,7 @@ class WsServerTest extends TestCase
         $configFile = ROOT_DIR . '/config/jacked-server.php';
 
         // @throws Exception
-        $this->processesPids[] = $this->startServer(configFile: $configFile);
+        $this->startServer(configFile: $configFile);
 
         $atomic = new Atomic();
 
@@ -147,6 +129,9 @@ class WsServerTest extends TestCase
         usleep(300000); // 0.3 sec
 
         $this->assertEquals('Message received: Test Message 1', $result);
+
+        self::tearServerDown();
+        sleep(3);
     }
 
     public function test_can_authenticate_remote_server_at_handshake(): void
@@ -154,7 +139,7 @@ class WsServerTest extends TestCase
         $configFile = ROOT_DIR . '/ws-auth/jacked-server-with-ws-auth.php';
 
         // @throws Exception
-        $this->processesPids[] = $this->startServer(configFile: $configFile);
+        $this->startServer(configFile: $configFile);
 
         $token1 = $this->getToken($configFile);
         $token2 = $this->getToken($configFile);
@@ -194,6 +179,9 @@ class WsServerTest extends TestCase
         usleep(300000); // 0.3 sec
 
         $this->assertEquals('Message received: Test Message 1', $result);
+
+        self::tearServerDown();
+        sleep(3);
     }
 
     public function test_fail_to_authenticate_remote_server_at_handshake(): void
@@ -201,9 +189,7 @@ class WsServerTest extends TestCase
         $configFile = ROOT_DIR . '/ws-auth/jacked-server-with-ws-auth-2.php';
 
         // @throws Exception
-        $this->processesPids[] = $this->startServer(
-            configFile: $configFile,
-        );
+        $this->startServer(configFile: $configFile);
 
         $process = $this->startWsClient(
             onReadyCallback: function ($client, $worker) {
@@ -230,5 +216,8 @@ class WsServerTest extends TestCase
             needle: '403',
             haystack: $parsedResult['rawMessage'],
         );
+
+        self::tearServerDown();
+        sleep(3);
     }
 }
