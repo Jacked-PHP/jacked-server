@@ -13,7 +13,6 @@ readonly class OpenSwooleConfig extends Bag
     public function __construct(
         public string $documentRoot,
         public bool $enableStaticHandler,
-        public array $staticHandlerLocations,
         public int $reactorNum,
         public int $workerNum,
         public int $maxRequestExecutionTime,
@@ -21,6 +20,7 @@ readonly class OpenSwooleConfig extends Bag
         public ?string $sslKeyFile,
         public bool $openHttpProtocol,
         // public string $pidFile,
+        public array $staticHandlerLocations = [],
     ) {
     }
 
@@ -32,7 +32,7 @@ readonly class OpenSwooleConfig extends Bag
         return [
             'documentRoot' => ['required', 'string'],
             'enableStaticHandler' => ['required', 'boolean'],
-            'staticHandlerLocations' => ['required', 'array'],
+            'staticHandlerLocations' => ['array'],
             'reactorNum' => ['required', 'integer'],
             'workerNum' => ['required', 'integer'],
             'maxRequestExecutionTime' => ['required', 'integer'],

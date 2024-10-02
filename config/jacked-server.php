@@ -37,10 +37,11 @@ return [
     'openswoole-server-settings' => [
         // @phpstan-ignore-next-line
         'document_root' => $_ENV['JACKED_SERVER_DOCUMENT_ROOT'] ?? ROOT_DIR,
-        'enable_static_handler' => $_ENV['JACKED_SERVER_STATIC_ENABLED'] ?? true,
+        'enable_static_handler' => ($_ENV['JACKED_SERVER_STATIC_ENABLED'] ?? 'true') === 'true',
+        'enable_static_handler_locations' => ($_ENV['JACKED_SERVER_STATIC_LOCATIONS_ENABLED'] ?? 'false') === 'true',
         'static_handler_locations' => explode(
             ',',
-            $_ENV['JACKED_SERVER_STATIC_LOCATIONS'] ?? '/imgs,/css,/js,/build',
+            $_ENV['JACKED_SERVER_STATIC_LOCATIONS'] ?? '/imgs,/css,/js,/build,/vendor',
         ),
 
         // reactor and workers
@@ -64,7 +65,7 @@ return [
     // ------------------------------------------------------------
 
     'audit' => [
-        'enabled' => $_ENV['JACKED_SERVER_AUDIT_ENABLED'] ?? false,
+        'enabled' => ($_ENV['JACKED_SERVER_AUDIT_ENABLED'] ?? 'false') === 'true',
     ],
 
     // ------------------------------------------------------------
@@ -99,15 +100,15 @@ return [
     // ------------------------------------------------------------
 
     'websocket' => [
-        'enabled' => $_ENV['JACKED_SERVER_WEBSOCKET_ENABLED'] ?? false,
+        'enabled' => ($_ENV['JACKED_SERVER_WEBSOCKET_ENABLED'] ?? 'false') === 'true',
 
         // auth
-        'auth' => $_ENV['JACKED_SERVER_WEBSOCKET_AUTH'] ?? false,
+        'auth' => ($_ENV['JACKED_SERVER_WEBSOCKET_AUTH'] ?? 'false') === 'true',
         'secret' => $_ENV['JACKED_SERVER_WEBSOCKET_SECRET'] ?? null,
         'token' => $_ENV['JACKED_SERVER_WEBSOCKET_TOKEN'] ?? null,
 
         // features
-        'acknowledgment' => $_ENV['JACKED_SERVER_WEBSOCKET_USE_ACKNOWLEDGMENT'] ?? false,
+        'acknowledgment' => ($_ENV['JACKED_SERVER_WEBSOCKET_USE_ACKNOWLEDGMENT'] ?? 'false') === 'true',
     ],
 
     // ------------------------------------------------------------

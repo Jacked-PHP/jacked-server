@@ -464,7 +464,7 @@ class Server
     {
         $camelCasedSettings = [];
         foreach (
-            array_merge(Config::get('openswoole-server-settings', [
+            array_merge(Config::get('openswoole-server-settings', []), [
                 // base settings
                 'document_root' => $this->publicDocumentRoot, // @phpstan-ignore-line
                 'enable_static_handler' => true,
@@ -476,12 +476,23 @@ class Server
 
                 // timeout
                 'max_request_execution_time' => $this->timeout,
-            ]), ($this->ssl ? [
+            ], ($this->ssl ? [
                 'ssl_cert_file' => $this->sslCertFile,
                 'ssl_key_file' => $this->sslKeyFile,
                 'open_http_protocol' => true,
             ] : [])) as $key => $value
         ) {
+            if (
+                !Config::get('openswoole-server-settings.enable_static_handler_locations')
+                && $key === 'static_handler_locations'
+            ) {
+                continue;
+            }
+
+            if ($key === 'enable_static_handler_locations') {
+                continue;
+            }
+
             $camelCasedSettings[Str::camel($key)] = $value;
         }
 
