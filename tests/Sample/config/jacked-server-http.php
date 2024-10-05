@@ -28,10 +28,6 @@ return [
     // Running server default options
     // ------------------------------------------------------------
 
-    'server-protocol' => 'HTTP/1.1',
-    'content-type' => 'text/html',
-    'reactor-num' => $_ENV['JACKED_SERVER_REACTOR_NUM'] ?? Util::getCPUNum() + 2,
-    'worker-num' => $_ENV['JACKED_SERVER_WORKER_NUM'] ?? Util::getCPUNum() + 2,
     // @phpstan-ignore-next-line
     'input-file' => '/index.php',
     'openswoole-server-settings' => [

@@ -30,9 +30,9 @@ trait HttpSupport
     protected function addHeaders(array &$requestOptions, array $headers = []): void
     {
         foreach ($headers as $key => $value) {
+            // add extra headers with http_ prefix
             $key = str_replace('-', '_', $key);
             // here we are duplicating the header with the http_ prefix just in case,
-            // but it seems to work without it - some review is necessary
             $requestOptions['http_' . $key] = $value;
             $requestOptions[$key] = $value;
         }
@@ -95,54 +95,6 @@ trait HttpSupport
         ) {
             throw new RedirectException($pathInfo . '/');
         }
-    }
-
-    /**
-     * @param Request $request
-     * @param Response $response
-     * @param string $host
-     * @param int $port
-     * @param array<array-key, string> $allowedHeaders
-     * @return void
-     */
-    protected function proxyRequest(
-        Request $request,
-        Response $response,
-        string $host,
-        int $port,
-        array $allowedHeaders,
-    ): void {
-        $this->report($this->logPrefix . 'Proxy Request: {pathInfo}', context: [
-            'pathInfo' => $request->server['path_info'] ?? '',
-            'requestOptions' => $request->server,
-            'content' => $request->rawContent(),
-        ], skipPrint: true);
-        $this->report($this->logPrefix . 'Request Time: {time}', context: [
-            'time' => Carbon::now()->format('Y-m-d H:i:s'),
-        ]);
-
-        $client = new CoroutineHttpClient($host, $port);
-        $client->setHeaders([
-            'Host' => $host . ':' . $port,
-            'User-Agent' => 'Jacked Server HTTP Proxy',
-        ]);
-        $client->set([ 'timeout' => $this->timeout]);
-        $status = $client->execute($request->server['request_uri']);
-
-        $headers = $client->headers;
-        $body = $client->body;
-        $client->close();
-
-        foreach ($headers ?? [] as $key => $value) {
-            if (in_array($key, $allowedHeaders)) {
-                $response->header($key, $value);
-            }
-        }
-        $response->status($status);
-
-        $response->write($body);
-
-        $response->end();
     }
 
     protected function executeRequest(array $requestOptions, string $content, Response $response): JackedResponse|null
@@ -251,7 +203,7 @@ trait HttpSupport
 
         $requestUri = Arr::get($serverInfo, 'request_uri', '');
 
-        return array_change_key_case(array_filter(array_merge(
+        return array_change_key_case(array_merge(
             $requestOptions,
             $this->getProjectLocation(header: $header, serverInfo: $serverInfo, requestUri: $requestUri),
             [
@@ -264,7 +216,7 @@ trait HttpSupport
                 ),
                 'server_name' => Arr::get($requestOptions, 'http_host'),
             ],
-        )), CASE_UPPER);
+        ), CASE_UPPER);
     }
 
     private function getProjectLocation(array $header, array $serverInfo, string $requestUri): array

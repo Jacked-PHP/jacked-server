@@ -28,10 +28,6 @@ return [
     // Running server default options
     // ------------------------------------------------------------
 
-    'server-protocol' => 'HTTP/1.1',
-    'content-type' => 'text/html',
-    'reactor-num' => $_ENV['JACKED_SERVER_REACTOR_NUM'] ?? Util::getCPUNum() + 2,
-    'worker-num' => $_ENV['JACKED_SERVER_WORKER_NUM'] ?? Util::getCPUNum() + 2,
     // @phpstan-ignore-next-line
     'input-file' => $_ENV['JACKED_SERVER_INPUT_FILE'] ?? ROOT_DIR . '/index.php',
     'openswoole-server-settings' => [
@@ -45,8 +41,8 @@ return [
         ),
 
         // reactor and workers
-        'reactor_num' => 4,
-        'worker_num' => 4,
+        'reactor_num' => $_ENV['JACKED_SERVER_REACTOR_NUM'] ?? Util::getCPUNum() + 2,
+        'worker_num' => $_ENV['JACKED_SERVER_WORKER_NUM'] ?? Util::getCPUNum() + 2,
 
         // timeout
         'max_request_execution_time' => 60,
@@ -58,6 +54,10 @@ return [
 
         // @phpstan-ignore-next-line
         // 'pid_file' => $_ENV['JACKED_SERVER_PID_FILE'] ?? ROOT_DIR . '/jacked-server.pid',
+
+        'http_compression' => ($_ENV['JACKED_SERVER_HTTP_COMPRESSION'] ?? 'true') === 'true',
+        'http_compression_level' => (int) ($_ENV['JACKED_SERVER_HTTP_COMPRESSION_LEVEL'] ?? 1),
+        'http_parse_cookie' => ($_ENV['JACKED_SERVER_HTTP_PARSE_COOKIE'] ?? 'true') === 'true',
     ],
 
     // ------------------------------------------------------------

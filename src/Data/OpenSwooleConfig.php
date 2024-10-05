@@ -20,6 +20,9 @@ readonly class OpenSwooleConfig extends Bag
         public ?string $sslKeyFile,
         public bool $openHttpProtocol,
         // public string $pidFile,
+        public bool $httpCompression,
+        public int $httpCompressionLevel,
+        public bool $httpParseCookie = false,
         public array $staticHandlerLocations = [],
     ) {
     }
@@ -32,7 +35,6 @@ readonly class OpenSwooleConfig extends Bag
         return [
             'documentRoot' => ['required', 'string'],
             'enableStaticHandler' => ['required', 'boolean'],
-            'staticHandlerLocations' => ['array'],
             'reactorNum' => ['required', 'integer'],
             'workerNum' => ['required', 'integer'],
             'maxRequestExecutionTime' => ['required', 'integer'],
@@ -40,6 +42,10 @@ readonly class OpenSwooleConfig extends Bag
             'sslKeyFile' => ['nullable', 'string'],
             'openHttpProtocol' => ['required', 'boolean'],
             // 'pidFile' => ['required', 'string'],
+            'httpCompression' => ['required', 'boolean'],
+            'httpCompressionLevel' => ['required', 'integer'],
+            'httpParseCookie' => ['required', 'boolean'],
+            'staticHandlerLocations' => ['array'],
         ];
     }
 

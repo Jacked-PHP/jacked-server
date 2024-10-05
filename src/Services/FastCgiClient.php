@@ -244,11 +244,11 @@ class FastCgiClient
     /**
      * Build a FastCGI packet
      *
-     * @param Integer $type Type of the packet
-     * @param String $content Content of the packet
-     * @param Integer $requestId RequestId
+     * @param int $type Type of the packet
+     * @param string $content Content of the packet
+     * @param int $requestId RequestId
      */
-    private function buildPacket($type, $content, $requestId = 1)
+    private function buildPacket(int $type, string $content, int $requestId = 1): string
     {
         $clen = strlen($content);
         return chr(self::VERSION_1)         /* version */
@@ -265,11 +265,11 @@ class FastCgiClient
     /**
      * Build an FastCGI Name value pair
      *
-     * @param String $name Name
-     * @param String $value Value
-     * @return String FastCGI Name value pair
+     * @param string $name Name
+     * @param string $value Value
+     * @return string FastCGI Name value pair
      */
-    private function buildNvpair($name, $value)
+    private function buildNvpair(string $name, string $value): string
     {
         $nlen = strlen($name);
         $vlen = strlen($value);
@@ -294,10 +294,11 @@ class FastCgiClient
     /**
      * Read a set of FastCGI Name value pairs
      *
-     * @param String $data Data containing the set of FastCGI NVPair
-     * @return array of NVPair
+     * @param string $data Data containing the set of FastCGI NVPair
+     * @param ?int $length Length of the data
+     * @return array<mixed> of NVPair
      */
-    private function readNvpair($data, $length = null)
+    private function readNvpair(string $data, ?int $length = null): array
     {
         $array = array();
 
@@ -681,7 +682,7 @@ class FastCgiClient
         }
 
         if (!is_array($resp)) {
-            throw new \Exception('Read failed');
+            throw new Exception('Read failed');
         }
 
         switch (ord($resp['content'][4])) {

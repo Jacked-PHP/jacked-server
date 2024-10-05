@@ -439,7 +439,8 @@ class Server
             $streamCallback($response);
             $response->end();
         } elseif (!empty($body)) {
-            $response->write($body);
+            $response->header('Connection', ['close']);
+            $response->end($body);
         } else {
             $response->end();
         }
