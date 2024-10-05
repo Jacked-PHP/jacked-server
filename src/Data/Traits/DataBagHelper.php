@@ -4,7 +4,7 @@ namespace JackedPhp\JackedServer\Data\Traits;
 
 trait DataBagHelper
 {
-    public static function from(mixed $values): static
+    public static function from(mixed ...$values): static
     {
         /** @var static $data */
         $data = parent::from($values);

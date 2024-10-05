@@ -53,6 +53,10 @@ return [
 
         // @phpstan-ignore-next-line
         // 'pid_file' => $_ENV['JACKED_SERVER_PID_FILE'] ?? ROOT_DIR . '/jacked-server.pid',
+
+        'http_compression' => ($_ENV['JACKED_SERVER_HTTP_COMPRESSION'] ?? 'true') === 'true',
+        'http_compression_level' => (int) ($_ENV['JACKED_SERVER_HTTP_COMPRESSION_LEVEL'] ?? 1),
+        'http_parse_cookie' => ($_ENV['JACKED_SERVER_HTTP_PARSE_COOKIE'] ?? 'true') === 'true',
     ],
 
     // ------------------------------------------------------------
