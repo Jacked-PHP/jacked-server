@@ -50,6 +50,8 @@ class Response
             $this->addNormalizedHeader($headerKey, $headerValue);
         }
 
+        $this->addRawHeader('X-Jacked-Server', 'Everything is worth it if the soul is not small.');
+
         $this->body = implode(PHP_EOL, array_slice($lines, $offset + 2));
     }
 

@@ -14,9 +14,7 @@ use JackedPhp\JackedServer\Services\FastCgiClient;
 use JackedPhp\JackedServer\Services\Response as JackedResponse;
 use Monolog\Level;
 use OpenSwoole\Http\Request;
-use OpenSwoole\Coroutine\Http\Client as CoroutineHttpClient;
 use OpenSwoole\Http\Response;
-use Symfony\Component\Console\Style\OutputStyle;
 
 trait HttpSupport
 {
