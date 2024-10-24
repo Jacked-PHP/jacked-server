@@ -16,6 +16,8 @@ Jacked Server is a WebServer that support HTTP and WebSocket. Jacked Server is b
 > npm run dev
 > ```
 
+### Using bare metal
+
 Let's jack that laravel app! First, download the Jacked Server binary and run it:
 
 ```shell
@@ -27,6 +29,26 @@ sudo chmod +x jackit.phar
 > Note: you might need to be able to interact with php-fpm. This might involve running as root or www-data (`sudo -u www-data ./jackit /path/to/laravel/public`) and from a directory accessible by www-data users (`/var/www`).
 
 Now you access the laravel app at the address http://localhost:8080.
+
+### Using docker
+
+> This alternative doesn't require PHP with the necessary extensions to be installed on your machine (you would still need PHP for the previous laravel preparation - which won't require all the extensions that Jacked Server requires).
+
+Let's jack that laravel app! For that, simply run the following command within the app's directory:
+
+```shell
+docker run -d --rm --name jacked-server -p 8080:8080 -v $(pwd):/var/www/app lotharthesavior/jacked-server:0.0.1
+```
+
+> Note that the latest version might not be the same as the one in the example command. Visit the [Docker Hub](https://hub.docker.com/repository/docker/lotharthesavior/jacked-server) to check the latest version.
+
+Now you access the laravel app at the address http://localhost:8080.
+
+> Remember to run the laravel necessary commands from inside the container then. As an example, if you want to run the Storage Link Artisan Command, you can do it with the following command:
+> 
+> ```shell
+> docker exec -it jacked-server bash -c "cd /var/www/app && composer install && php artisan storage:link"
+> ```
 
 ## Installation
 
